@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Protctus Network Security Configuration
+    - Blocks ALL cleartext (HTTP) traffic in production
+    - Enforces HTTPS system CA trust chain
+    - Allows user CAs only in debug builds (for Charles/mitmproxy testing)
+-->
+<network-security-config>
+    <!-- Block cleartext HTTP globally -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Debug overrides: allow user-installed CAs for proxy debugging -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>

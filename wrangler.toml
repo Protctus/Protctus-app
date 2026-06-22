@@ -1,0 +1,25 @@
+name = "protctus-quests-api"
+main = "src/index.ts"
+compatibility_date = "2024-03-29"
+compatibility_flags = [ "nodejs_compat" ]
+
+# The D1 Database Binding
+[[d1_databases]]
+binding = "DB" # How you access it in Worker: env.DB
+database_name = "protctus_quests_db"
+# You MUST replace this with your actual DB ID once you run `npx wrangler d1 create protctus_quests_db`
+database_id = "13cfdd6b-665d-4a4b-ad68-58fc0815b8d6" 
+
+[observability]
+enabled = true
+
+[vars]
+ADMIN_USERNAME = "jatinsharmashivpuri02122008@gmail.com"
+ADMIN_PASSWORD_HASH = "41a2ef8ac60a4df4b37f17df3b1deff4e2353774570975cabb793512b4096688"
+RAZORPAY_KEY_ID = "rzp_test_Sm5EJlPpaAxGnD"
+RAZORPAY_KEY_SECRET = "YPR0uKiq39epM8AzpnKTUzJm"
+SUPABASE_URL = "https://wkmtgvjyjyjfmwrmlkqa.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY = "sb_publishable_dDVwdFsK8K-yE2tDIH5Z-g_tbTUPMY6"
+FIREBASE_API_KEY = "AIzaSyAHlKQewz5Lw_2FCnPRk53ocPPvLkhtukU"
+JWT_SECRET = "protctus-super-secret-admin-key-2026"
+

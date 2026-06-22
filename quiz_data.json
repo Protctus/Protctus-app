@@ -1,0 +1,362 @@
+[
+    {
+        "id": "q1",
+        "question": "What is the most secure way to lock your smartphone?",
+        "options": [
+            "Swipe to unlock",
+            "A 4-digit PIN",
+            "A complex alphanumeric password or Biometrics",
+            "Drawing a simple 'L' pattern"
+        ],
+        "correctOptionIndex": 2,
+        "points": 20
+    },
+    {
+        "id": "q2",
+        "question": "Which Android permission is considered the most dangerous if given to a simple flashlight app?",
+        "options": [
+            "Internet",
+            "Accessibility Services",
+            "Vibrate",
+            "Camera"
+        ],
+        "correctOptionIndex": 1,
+        "points": 20
+    },
+    {
+        "id": "q3",
+        "question": "You receive an SMS saying your bank account is blocked with a link to verify. What is this attack called?",
+        "options": [
+            "Vishing",
+            "Smishing (SMS Phishing)",
+            "Whaling",
+            "DDoS Attack"
+        ],
+        "correctOptionIndex": 1,
+        "points": 20
+    },
+    {
+        "id": "q4",
+        "question": "What does 'HTTPS' indicate in a website URL?",
+        "options": [
+            "The website is 100% safe from malware",
+            "The website loads faster",
+            "The connection between you and the site is encrypted",
+            "The website is hosted on a private server"
+        ],
+        "correctOptionIndex": 2,
+        "points": 20
+    },
+    {
+        "id": "q5",
+        "question": "Why is using a public Wi-Fi network at a coffee shop risky?",
+        "options": [
+            "It drains your battery faster",
+            "Hackers on the same network can intercept unencrypted data",
+            "It uses too much mobile data",
+            "It automatically installs viruses"
+        ],
+        "correctOptionIndex": 1,
+        "points": 20
+    },
+    {
+        "id": "q6",
+        "question": "What is the primary purpose of Two-Factor Authentication (2FA)?",
+        "options": [
+            "To make logging in faster",
+            "To require a second proof of identity beyond just a password",
+            "To allow two people to use the same account",
+            "To link your social media accounts"
+        ],
+        "correctOptionIndex": 1,
+        "points": 20
+    },
+    {
+        "id": "q7",
+        "question": "What should you do before selling or giving away your old Android phone?",
+        "options": [
+            "Delete all photos manually",
+            "Log out of Google",
+            "Perform a Factory Data Reset",
+            "Uninstall all downloaded apps"
+        ],
+        "correctOptionIndex": 2,
+        "points": 20
+    },
+    {
+        "id": "q8",
+        "question": "Which of these is considered a strong, secure password?",
+        "options": [
+            "Password123",
+            "Ronaldo@2024",
+            "MyDogNameIsMax",
+            "g7#K9p$vL2!mQx"
+        ],
+        "correctOptionIndex": 3,
+        "points": 20
+    },
+    {
+        "id": "q9",
+        "question": "Incognito mode (Private browsing) hides your search activity from:",
+        "options": [
+            "Your Internet Service Provider (ISP)",
+            "The websites you visit",
+            "People who physically use your device later",
+            "Your network administrator"
+        ],
+        "correctOptionIndex": 2,
+        "points": 20
+    },
+    {
+        "id": "q10",
+        "question": "What does 'Malware' stand for?",
+        "options": [
+            "Malfunctioning Hardware",
+            "Malicious Software",
+            "Multiple Wires",
+            "Mainframe Architecture"
+        ],
+        "correctOptionIndex": 1,
+        "points": 20
+    },
+    {
+        "id": "q11",
+        "question": "How does a 'Man-in-the-Middle' (MitM) attack work?",
+        "options": [
+            "An attacker guesses your password",
+            "An attacker secretly intercepts communications between two parties",
+            "A virus destroys your hard drive",
+            "An app steals your contacts"
+        ],
+        "correctOptionIndex": 1,
+        "points": 50
+    },
+    {
+        "id": "q12",
+        "question": "What is 'Ransomware'?",
+        "options": [
+            "Software that asks for a 5-star review",
+            "Malware that encrypts your files and demands payment to unlock them",
+            "A tool to recover deleted photos",
+            "An app that mines cryptocurrency"
+        ],
+        "correctOptionIndex": 1,
+        "points": 50
+    },
+    {
+        "id": "q13",
+        "question": "What does a VPN (Virtual Private Network) primarily do?",
+        "options": [
+            "Speeds up your internet connection",
+            "Masks your IP address and encrypts your internet traffic",
+            "Deletes viruses from your phone",
+            "Gives you free internet access"
+        ],
+        "correctOptionIndex": 1,
+        "points": 50
+    },
+    {
+        "id": "q14",
+        "question": "If your email is found on the 'Dark Web', what does it mean?",
+        "options": [
+            "Your email is permanently deleted",
+            "You can never use that email again",
+            "Your email and possibly your password were part of a data breach",
+            "Your internet speed will slow down"
+        ],
+        "correctOptionIndex": 2,
+        "points": 50
+    },
+    {
+        "id": "q15",
+        "question": "Why is sideloading apps (installing APKs from unknown sources) dangerous?",
+        "options": [
+            "It voids your phone's warranty",
+            "The apps might not fit your screen",
+            "These apps bypass Google Play Protect's security checks",
+            "It uses too much storage"
+        ],
+        "correctOptionIndex": 2,
+        "points": 50
+    },
+    {
+        "id": "q16",
+        "question": "What is 'Spyware'?",
+        "options": [
+            "An app that secretly tracks your keystrokes, location, and messages",
+            "A tool used by the government to protect you",
+            "A feature that finds your lost phone",
+            "An antivirus scanner"
+        ],
+        "correctOptionIndex": 0,
+        "points": 50
+    },
+    {
+        "id": "q17",
+        "question": "What is a 'Zero-Day' vulnerability?",
+        "options": [
+            "A bug that takes zero days to fix",
+            "A software flaw known to hackers but unknown to the software creator",
+            "A completely secure system",
+            "A virus that deletes itself by midnight"
+        ],
+        "correctOptionIndex": 1,
+        "points": 50
+    },
+    {
+        "id": "q18",
+        "question": "What does 'Phishing' rely on most to be successful?",
+        "options": [
+            "Advanced hacking software",
+            "Human error and psychological manipulation",
+            "Fast internet speeds",
+            "Outdated hardware"
+        ],
+        "correctOptionIndex": 1,
+        "points": 50
+    },
+    {
+        "id": "q19",
+        "question": "What is the danger of 'Juice Jacking'?",
+        "options": [
+            "Spilling a drink on your phone",
+            "Hackers stealing data or installing malware via public USB charging ports",
+            "Overcharging your battery",
+            "Using a counterfeit charger"
+        ],
+        "correctOptionIndex": 1,
+        "points": 50
+    },
+    {
+        "id": "q20",
+        "question": "What is a 'Botnet'?",
+        "options": [
+            "A network of infected devices controlled remotely by an attacker",
+            "An AI chat robot",
+            "A secure network for banks",
+            "A tool to automate your smart home"
+        ],
+        "correctOptionIndex": 0,
+        "points": 50
+    },
+    {
+        "id": "q21",
+        "question": "What does 'k-Anonymity' ensure when checking for leaked passwords?",
+        "options": [
+            "It sends your full password securely",
+            "It only sends a partial hash prefix, ensuring the server never knows your actual password",
+            "It encrypts your password twice",
+            "It changes your password automatically"
+        ],
+        "correctOptionIndex": 1,
+        "points": 100
+    },
+    {
+        "id": "q22",
+        "question": "In Android architecture, what does the 'VpnService' API intercept?",
+        "options": [
+            "Only incoming SMS messages",
+            "All outgoing network packets (TCP/UDP) at the OS level",
+            "Only files saved to the SD card",
+            "Camera hardware signals"
+        ],
+        "correctOptionIndex": 1,
+        "points": 100
+    },
+    {
+        "id": "q23",
+        "question": "What is the principle of 'Zero Trust' architecture?",
+        "options": [
+            "Trusting no antivirus software",
+            "Never trusting any device or user by default, constantly verifying identity and access",
+            "Disconnecting the device from the internet entirely",
+            "Trusting only devices inside the corporate network"
+        ],
+        "correctOptionIndex": 1,
+        "points": 100
+    },
+    {
+        "id": "q24",
+        "question": "Which hashing algorithm is widely considered cryptographically broken and unsafe for storing passwords?",
+        "options": [
+            "SHA-256",
+            "bcrypt",
+            "MD5",
+            "Argon2"
+        ],
+        "correctOptionIndex": 2,
+        "points": 100
+    },
+    {
+        "id": "q25",
+        "question": "What is 'DNS Spoofing'?",
+        "options": [
+            "Speeding up website loading times",
+            "Corrupting a Domain Name Server to redirect traffic to a malicious website",
+            "Hiding your IP address",
+            "Encrypting your local storage"
+        ],
+        "correctOptionIndex": 1,
+        "points": 100
+    },
+    {
+        "id": "q26",
+        "question": "What is a 'Rootkit'?",
+        "options": [
+            "A tool to jailbreak your phone safely",
+            "Malware designed to gain administrative control while hiding its presence",
+            "A software update package",
+            "A type of secure firewall"
+        ],
+        "correctOptionIndex": 1,
+        "points": 100
+    },
+    {
+        "id": "q27",
+        "question": "What is a 'DDoS' attack?",
+        "options": [
+            "Downloading data over a secure socket",
+            "Overwhelming a target server with a flood of internet traffic to take it offline",
+            "Stealing a database file secretly",
+            "Encrypting a single user's hard drive"
+        ],
+        "correctOptionIndex": 1,
+        "points": 100
+    },
+    {
+        "id": "q28",
+        "question": "What is the primary function of a 'Hardware Security Key' (e.g., YubiKey)?",
+        "options": [
+            "To expand your device storage",
+            "To act as a physical, un-phishable token for Two-Factor Authentication",
+            "To boost Wi-Fi signals",
+            "To mine cryptocurrency offline"
+        ],
+        "correctOptionIndex": 1,
+        "points": 100
+    },
+    {
+        "id": "q29",
+        "question": "What does 'End-to-End Encryption' (E2EE) mean in messaging apps?",
+        "options": [
+            "Only the sender and receiver can read the messages; not even the app company can read them",
+            "Messages are encrypted only when connected to Wi-Fi",
+            "Messages disappear after 24 hours",
+            "The app requires a password to open"
+        ],
+        "correctOptionIndex": 0,
+        "points": 100
+    },
+    {
+        "id": "q30",
+        "question": "What is a 'Logic Bomb' in cybersecurity?",
+        "options": [
+            "A bomb threat sent via email",
+            "Malicious code that lies dormant until a specific condition or date is met",
+            "An extremely complex password",
+            "A firewall that blocks logical ports"
+        ],
+        "correctOptionIndex": 1,
+        "points": 100
+    }
+]
