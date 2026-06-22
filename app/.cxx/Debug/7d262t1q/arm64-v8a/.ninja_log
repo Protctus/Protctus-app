@@ -1,0 +1,6 @@
+# ninja log v5
+10	731	7997791772682234	CMakeFiles/vpn-core.dir/edge_phishing_pipeline.cpp.o	218705c13a502824
+736	1055	7997791775923824	A:/Protctus/Protctus-app/app/build/intermediates/cxx/Debug/7d262t1q/obj/arm64-v8a/libvpn-core.so	fe43cadbd46c821b
+0	2271	7997791788063480	CMakeFiles/chakravyuh.dir/chakravyuh.cpp.o	50cb88614185b869
+2278	2486	7997791790250710	A:/Protctus/Protctus-app/app/build/intermediates/cxx/Debug/7d262t1q/obj/arm64-v8a/libchakravyuh.so	3de245942e1ab3b2
+0	14	0	clean	7035e5ca3c51ad9e

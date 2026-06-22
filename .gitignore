@@ -10,7 +10,6 @@ vpn-core-module/build/
 yara-core-module/build/
 /captures/
 .externalNativeBuild/
-.cxx/
 
 # Node.js
 node_modules/

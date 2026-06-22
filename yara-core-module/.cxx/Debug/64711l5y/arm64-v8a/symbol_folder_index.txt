@@ -1,0 +1,1 @@
+A:\Protctus\Protctus-app\yara-core-module\build\intermediates\cxx\Debug\64711l5y\obj\arm64-v8a
