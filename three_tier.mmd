@@ -1,9 +1,0 @@
-﻿graph TD
-    URL["Incoming URL"] --> L1{"Tier 1:<br/>VVIP (380K)"}
-    L1 -->|"Match"| SAFE["SAFE"]
-    L1 -->|"No"| L2{"Tier 2:<br/>SafeList"}
-    L2 -->|"Match"| SAFE
-    L2 -->|"No"| L3{"Tier 3:<br/>TFLite ML"}
-    L3 -->|"High"| BLOCK["BLOCK"]
-    L3 -->|"Mid"| WARN["WARN"]
-    L3 -->|"Low"| SAFE

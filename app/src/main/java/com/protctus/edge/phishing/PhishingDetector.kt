@@ -67,8 +67,8 @@ class PhishingDetector(private val context: Context) {
         const val HEURISTIC_CAP = 0.80f
         const val REPORT_SUSPICIOUS = 0.50f
         // DNS-only path thresholds (no ML, so more conservative)
-        const val DNS_BLOCK_THRESHOLD = 0.70f
-        const val DNS_SUSPICIOUS_THRESHOLD = 0.40f
+        const val DNS_BLOCK_THRESHOLD = 0.80f // Increased from 0.70f to require absolute heuristic consensus (zero false positives)
+        const val DNS_SUSPICIOUS_THRESHOLD = 0.65f // Increased from 0.40f to stop notification spam for CDNs/Ads
 
         private const val BK_TOP_N = 5000
         private const val BK_MAX_DIST = 2

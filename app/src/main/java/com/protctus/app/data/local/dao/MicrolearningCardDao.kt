@@ -17,7 +17,7 @@ interface MicrolearningCardDao {
     @Query("SELECT * FROM microlearning_cards ORDER BY priority ASC")
     fun getAllCardsFlow(): Flow<List<MicrolearningCardData>>
     
-    @Query("SELECT DISTINCT category FROM microlearning_cards WHERE category != '' AND isCompleted = 0")
+    @Query("SELECT category FROM microlearning_cards GROUP BY category ORDER BY MIN(priority) ASC")
     fun getDistinctCategories(): Flow<List<String>>
     
     // CS-3.5 fix: Removed isCompleted = 0 filter to allow 4-state architecture

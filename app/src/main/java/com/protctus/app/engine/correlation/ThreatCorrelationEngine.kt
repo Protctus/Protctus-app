@@ -247,13 +247,28 @@ class ThreatCorrelationEngine private constructor(private val context: Context) 
      * Contextual Demotion: Determines origin and applies power-user mitigation flags.
      */
     private fun evaluateOriginContext(pm: PackageManager, packageName: String, expl: ConcurrentExplanation): List<EvidenceSignal> {
+        val isSystemApp = try {
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0 || 
+            (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+        } catch (_: Exception) { false }
+
+        if (isSystemApp) {
+            expl.mitigating.add("Verified system application.")
+            return emptyList()
+        }
+
         val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try { pm.getInstallSourceInfo(packageName).installingPackageName } catch (_: Exception) { null }
         } else {
             @Suppress("DEPRECATION") pm.getInstallerPackageName(packageName)
         }
         
-        val safeInstallSources = listOf("com.android.vending", "com.sec.android.app.samsungapps", "com.amazon.venezia")
+        val safeInstallSources = listOf(
+            "com.android.vending", "com.sec.android.app.samsungapps", "com.amazon.venezia",
+            "com.huawei.appmarket", "com.xiaomi.mipicks", "com.bbk.appstore", "com.heytap.market",
+            "com.oppo.market", "com.vivo.appstore", "com.coloros.appmanager"
+        )
         val isSideloaded = installer == null || !safeInstallSources.contains(installer)
         
         return if (isSideloaded) {
@@ -309,7 +324,7 @@ class ThreatCorrelationEngine private constructor(private val context: Context) 
             var chainMultiplier = 1.0f
             if (clusterScores.containsKey(EvidenceCluster.UI_ABUSE) && clusterScores.containsKey(EvidenceCluster.DYNAMIC_STEALTH)) {
                 expl.topReasons.add("Advanced Evasion Chain: UI Abuse coupled with Dynamic Stealth.")
-                chainMultiplier = 1.6f // Aggressively escalates stealth malware
+                chainMultiplier = 1.1f // Reduced from 1.6f to prevent False Positives for legitimate banking/automation apps
             }
 
             // 5. DETERMINISTIC INTENT vs CAPABILITY AGGREGATION
@@ -319,11 +334,11 @@ class ThreatCorrelationEngine private constructor(private val context: Context) 
             
             clusterScores.forEach { (cluster, score) ->
                 when (cluster) {
-                    EvidenceCluster.THREAT_SIGNATURE -> intentBelief += score * 0.90f
-                    EvidenceCluster.DYNAMIC_STEALTH -> intentBelief += score * 0.75f
-                    EvidenceCluster.UI_ABUSE -> maxCapabilityBelief = maxOf(maxCapabilityBelief, score * 0.60f)
-                    EvidenceCluster.STRUCTURAL_ANOMALY -> maxCapabilityBelief = maxOf(maxCapabilityBelief, score * 0.50f)
-                    else -> maxCapabilityBelief = maxOf(maxCapabilityBelief, score * 0.40f)
+                    EvidenceCluster.THREAT_SIGNATURE -> intentBelief += score * 0.95f
+                    EvidenceCluster.DYNAMIC_STEALTH -> maxCapabilityBelief = maxOf(maxCapabilityBelief, score * 0.40f)
+                    EvidenceCluster.UI_ABUSE -> maxCapabilityBelief = maxOf(maxCapabilityBelief, score * 0.40f)
+                    EvidenceCluster.STRUCTURAL_ANOMALY -> maxCapabilityBelief = maxOf(maxCapabilityBelief, score * 0.40f)
+                    else -> maxCapabilityBelief = maxOf(maxCapabilityBelief, score * 0.35f)
                 }
             }
 

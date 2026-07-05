@@ -119,11 +119,14 @@ class PhishingVpnService : VpnService() {
             val builder = Builder()
                 .setSession("Protctus AI Phishing Shield")
                 .addAddress("10.0.0.2", 32)
+                .addAddress("fd00:1:fd00:1:fd00:1:fd00:1", 128) // IPv6 support prevents internet block on IPv6-only networks
                 // Use a fake DNS server address that we will intercept in native code
                 .addDnsServer("10.0.0.1") 
+                .addDnsServer("fd00:1:fd00:1:fd00:1:fd00:2") // Intercept IPv6 DNS to prevent bypass/leaks (False negatives)
                 // ONLY route the fake DNS traffic through the tunnel.
                 // This ensures all other traffic (YouTube, Web, etc.) remains at 100% native speed.
                 .addRoute("10.0.0.1", 32)
+                .addRoute("fd00:1:fd00:1:fd00:1:fd00:2", 128)
                 .setMtu(1280) // Standard safe MTU for mobile/VPN
                 .setBlocking(true) // MUST be blocking so read() doesn't return EAGAIN and crash the native thread
 
@@ -213,17 +216,17 @@ class PhishingVpnService : VpnService() {
     private fun isAppInfrastructure(domain: String): Boolean {
         val d = domain.lowercase()
         val essentialSuffixes = arrayOf(
-            "workers.dev",
-            "googleapis.com",
-            "firebaseio.com",
-            "crashlytics.com",
-            "razorpay.com",
-            "stripe.com",
-            "google.com",
-            "gstatic.com",
-            "app-measurement.com",
-            "google-analytics.com",
-            "firebase.com"
+            "workers.dev", "googleapis.com", "firebaseio.com", "crashlytics.com",
+            "razorpay.com", "stripe.com", "google.com", "gstatic.com",
+            "app-measurement.com", "google-analytics.com", "firebase.com",
+            "cloudfront.net", "amazonaws.com", "akamai.net", "akamaihd.net",
+            "fastly.net", "cloudflare.com", "cdn.cloudflare.net", "apple.com",
+            "icloud.com", "microsoft.com", "windows.com", "azure.com",
+            "facebook.com", "instagram.com", "whatsapp.net", "twitter.com",
+            "x.com", "linkedin.com", "netflix.com", "spotify.com",
+            "googlevideo.com", "youtube.com", "ytimg.com", "ggpht.com",
+            "github.com", "githubusercontent.com", "gitlab.com", "bitbucket.org",
+            "connectivitycheck.gstatic.com", "gvt1.com", "gvt2.com", "doubleclick.net"
         )
         for (suffix in essentialSuffixes) {
             if (d == suffix || d.endsWith(".$suffix")) {

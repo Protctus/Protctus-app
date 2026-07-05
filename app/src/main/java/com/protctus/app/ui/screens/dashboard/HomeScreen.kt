@@ -316,6 +316,18 @@ fun DashboardContent(
         val context = LocalContext.current
         var isVpnRunning by remember(result.isVpnActive) { mutableStateOf(result.isVpnActive) }
         
+        val vpnLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+        ) { activityResult ->
+            if (activityResult.resultCode == android.app.Activity.RESULT_OK) {
+                val vpnIntent = android.content.Intent(context, com.protctus.edge.phishing.PhishingVpnService::class.java)
+                context.startService(vpnIntent)
+                isVpnRunning = true
+            } else {
+                isVpnRunning = false
+            }
+        }
+        
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -359,28 +371,22 @@ fun DashboardContent(
             androidx.compose.material3.Switch(
                 checked = isVpnRunning,
                 onCheckedChange = { isChecked ->
-                    if (subscriptionTier >= 1) {
                         isVpnRunning = isChecked
                         try {
                             if (isChecked) {
                                 val intent = android.net.VpnService.prepare(context)
                                 if (intent != null) {
-                                    // Start activity to get permission (handled elsewhere in real app, but for MVP it will show the prompt)
-                                    context.startActivity(intent.apply { flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK })
+                                    // Start activity to get permission via launcher
+                                    vpnLauncher.launch(intent)
                                 } else {
                                     val vpnIntent = android.content.Intent(context, com.protctus.edge.phishing.PhishingVpnService::class.java)
                                     context.startService(vpnIntent)
                                 }
                             } else {
-                                val stopIntent = android.content.Intent(context, com.protctus.edge.phishing.PhishingVpnService::class.java).apply {
-                                    action = "STOP_VPN"
-                                }
-                                context.startService(stopIntent)
+                                val stopIntent = android.content.Intent(context, com.protctus.edge.phishing.PhishingVpnService::class.java)
+                                context.stopService(stopIntent)
                             }
                         } catch (e: Exception) {}
-                    } else {
-                        onLockedFeatureClick("Phishing Shield VPN", 1)
-                    }
                 },
                 colors = androidx.compose.material3.SwitchDefaults.colors(
                     checkedThumbColor = Color.White,

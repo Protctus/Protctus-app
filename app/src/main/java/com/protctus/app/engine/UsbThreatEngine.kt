@@ -120,7 +120,9 @@ object UsbThreatEngine {
         }
 
         // 2. Notification with Intent to app
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+            action = "com.protctus.app.ACTION_SHOW_USB_BLOCK_SCREEN"
+        }
         val pendingIntent = PendingIntent.getActivity(
             context, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

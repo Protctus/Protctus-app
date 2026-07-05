@@ -31,14 +31,7 @@ class UrlScannerEngine(private val context: Context) {
     private val db = AppDatabase.getInstance(context)
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    // For TFLite ML - Ideally inject or instantiate your TFLite wrapper here.
-    // Assuming PhishingDetector or a similar class provides a `predict(url)` method.
-    // For this engine implementation, we will use a placeholder function for ML execution.
-    private fun executeTFLiteModel(url: String): Float {
-        // TODO: Bridge to actual TFLite model execution
-        // Example: return tfliteWrapper.predict(url)
-        return 0.1f // Default safe score for mock
-    }
+    private val phishingDetector by lazy { com.protctus.edge.phishing.PhishingDetector(context) }
 
     /**
      * Core Multi-Layer Detection Pipeline
@@ -59,21 +52,10 @@ class UrlScannerEngine(private val context: Context) {
             return ScanVerdict.SAFE
         }
 
-        // Step 2: Heuristic Analysis
-        val heuristicScore = calculateHeuristicRisk(domain)
-        if (heuristicScore >= 1.0f) { // Immediate block for raw IP
-            Log.d(TAG, "Step 2: Heuristic indicates severe risk -> BLOCKED")
-            queueTelemetry(domain, heuristicScore, "IP_HEURISTIC", isFalsePositive = false)
-            return ScanVerdict.BLOCKED
-        }
-
-        // Step 3: ML Execution
-        val mlConfidence = executeTFLiteModel(url)
+        // Step 2 & 3: PhishingDetector Engine (ML + Dynamic Heuristics)
+        val finalScore = phishingDetector.analyzeDomainRisk(url)
         
-        // Combine ML confidence with Heuristic base risk
-        val finalScore = (mlConfidence + heuristicScore).coerceIn(0.0f, 1.0f)
-        
-        Log.d(TAG, "Step 3: ML= $mlConfidence, Heuristic= $heuristicScore, Final= $finalScore")
+        Log.d(TAG, "Step 3: Engine Final= $finalScore")
 
         return if (finalScore >= THRESHOLD_BLOCK) {
             queueTelemetry(domain, finalScore, "ML_PHISHING", isFalsePositive = false)

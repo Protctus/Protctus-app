@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -70,8 +72,16 @@ fun ThreatResolutionScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            val isSystemThreat = packageName == "NETWORK_SHIELD" || packageName == "USB_SHIELD"
+            
+            val titleText = when (packageName) {
+                "NETWORK_SHIELD" -> "Connection Blocked"
+                "USB_SHIELD" -> "USB Threat Detected"
+                else -> stringResource(R.string.stalkerware_detected)
+            }
+
             Text(
-                text = stringResource(R.string.stalkerware_detected),
+                text = titleText,
                 color = Color.White,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
@@ -90,7 +100,7 @@ fun ThreatResolutionScreen(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (iconBitmap != null) {
+                    if (iconBitmap != null && !isSystemThreat) {
                         Image(
                             bitmap = iconBitmap,
                             contentDescription = "App Icon",
@@ -104,7 +114,12 @@ fun ThreatResolutionScreen(
                                 .background(Color.DarkGray),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(stringResource(R.string.str_665550), color = Color.White, fontSize = 24.sp)
+                            Icon(
+                                imageVector = if (packageName == "USB_SHIELD") Icons.Outlined.Usb else if (packageName == "NETWORK_SHIELD") Icons.Outlined.Public else Icons.Outlined.Warning,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
                         }
                     }
 
@@ -114,14 +129,17 @@ fun ThreatResolutionScreen(
                         text = appName,
                         color = Color.White,
                         fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center
                     )
-
-                    Text(
-                        text = packageName,
-                        color = Color(0xFF7F909F),
-                        fontSize = 12.sp
-                    )
+                    
+                    if (!isSystemThreat) {
+                        Text(
+                            text = packageName,
+                            color = Color(0xFF7F909F),
+                            fontSize = 12.sp
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -144,47 +162,67 @@ fun ThreatResolutionScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            Button(
-                onClick = {
-                    val intent = Intent(Intent.ACTION_DELETE).apply {
-                        data = Uri.parse("package:$packageName")
-                    }
-                    context.startActivity(intent)
-                    navController.popBackStack()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.uninstall_app),
-                    color = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 16.sp,
-                    letterSpacing = 1.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedButton(
-                onClick = {
-                    coroutineScope.launch {
-                        settingsManager.addStalkerwareWhitelist(packageName)
+            if (!isSystemThreat) {
+                Button(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_DELETE).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        context.startActivity(intent)
                         navController.popBackStack()
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.mark_as_safe),
-                    color = Color(0xFF7F909F),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.uninstall_app),
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 16.sp,
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            settingsManager.addStalkerwareWhitelist(packageName)
+                            navController.popBackStack()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.mark_as_safe),
+                        color = Color(0xFF7F909F),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+            } else {
+                Button(
+                    onClick = {
+                        navController.popBackStack()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Text(
+                        text = if (packageName == "USB_SHIELD") "I Have Unplugged It" else "Back to Safety",
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 16.sp,
+                        letterSpacing = 1.sp
+                    )
+                }
             }
         }
     }

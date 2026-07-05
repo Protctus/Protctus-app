@@ -99,11 +99,6 @@ class MicrolearningRepository @Inject constructor(
 
     // ── Remote Sync with TTL (CS-3.3 fix) ──
 
-    /**
-     * Syncs microlearning cards from the remote API.
-     * Skips the network call if the last successful sync was within [SYNC_TTL_MS].
-     * Uses [smartUpsert] to never overwrite local completion state (CS-4.5 fix).
-     */
     suspend fun syncFeedIfStale() = withContext(Dispatchers.IO) {
         val lastSync = prefs.getLong(PREF_LAST_SYNC, 0L)
         val now = System.currentTimeMillis()
@@ -123,7 +118,6 @@ class MicrolearningRepository @Inject constructor(
                     val type = object : TypeToken<List<MicrolearningCardData>>() {}.type
                     val remoteCards: List<MicrolearningCardData> = Gson().fromJson(bodyStr, type)
                     if (remoteCards.isNotEmpty()) {
-                        // CS-4.5 fix: smartUpsert never overwrites isCompleted/isUnlocked
                         dao.smartUpsert(remoteCards)
                         prefs.edit().putLong(PREF_LAST_SYNC, now).apply()
                         Log.d(TAG, "Feed synced: ${remoteCards.size} cards upserted.")

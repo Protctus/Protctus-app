@@ -48,4 +48,14 @@ sealed class Route {
     @Serializable @Keep data class UrlScanner(val url: String? = null) : Route()
     @Serializable @Keep data class ThreatResolution(val packageName: String, val title: String, val description: String) : Route()
     @Serializable @Keep data object AdvanceSettings : Route()
+
+    // ── Education Redesign Routes ──
+    @Serializable @Keep data object EducationHome : Route()
+    @Serializable @Keep data object LearningPaths : Route()
+    @Serializable @Keep data object DailyGoal : Route()
+    @Serializable @Keep data object Streak : Route()
+    @Serializable @Keep data object Achievements : Route()
+    @Serializable @Keep data object Completion : Route()
+    @Serializable @Keep data object Profile : Route()
+    @Serializable @Keep data class EducationContent(val cardId: String) : Route()
 }

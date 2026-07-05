@@ -236,10 +236,10 @@ class QuarkEngine private constructor(private val context: Context) {
                     }
                 }
             } else if (!hasDexStrings) {
-                // Fallback: no DEX strings available, use permission correlation
-                val apiPermCorrelation = checkApiPermissionCorrelation(rule, profile.permissions)
-                if (apiPermCorrelation.first) rule.checkItem[1] = true
-                if (apiPermCorrelation.second) rule.checkItem[2] = true
+                // Fallback: no DEX strings available.
+                // STRICT POLICY: Permissions alone must NEVER generate behavioral verdicts.
+                // We do NOT use permission correlation to fake API presence.
+                // The rule will correctly fail to trigger (confidence remains 1 or 0).
             }
 
             // Record if rule triggered at meaningful confidence (≥40%)

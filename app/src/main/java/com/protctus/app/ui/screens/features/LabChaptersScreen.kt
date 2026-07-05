@@ -14,7 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
-import androidx.compose.material.icons.outlined.LibraryBooks
+import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.rounded.Close
@@ -45,7 +45,8 @@ import com.protctus.app.viewmodel.LabChaptersViewModel
 @Composable
 fun LabChaptersScreen(navController: NavController) {
     val viewModel: LabChaptersViewModel = hiltViewModel()
-    val categories by viewModel.categories.collectAsState()
+    val nodes by viewModel.nodes.collectAsState()
+    val categories = nodes.map { it.id }
 
     Scaffold(
         bottomBar = { ProtctusBottomNav(navController = navController) },
@@ -75,42 +76,54 @@ fun LabChaptersScreen(navController: NavController) {
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 60.dp, start = 24.dp, end = 24.dp, bottom = 40.dp)
             ) {
-                // Hero Section
+                // Hero Section with Gamified Stats
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.Start
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .shadow(
-                                    elevation = 16.dp,
-                                    shape = RoundedCornerShape(20.dp),
-                                    ambientColor = AccentColor.copy(alpha = 0.4f),
-                                    spotColor = AccentColor.copy(alpha = 0.4f)
-                                )
-                                .background(
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(AccentColor, Color(0xFF2E639A)) // Apple-like gradient
-                                    ),
-                                    shape = RoundedCornerShape(20.dp)
-                                )
-                                .padding(14.dp),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.School,
-                                contentDescription = "Education",
-                                tint = Color.White,
-                                modifier = Modifier.size(36.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .shadow(
+                                        elevation = 16.dp,
+                                        shape = RoundedCornerShape(20.dp),
+                                        ambientColor = AccentColor.copy(alpha = 0.4f),
+                                        spotColor = AccentColor.copy(alpha = 0.4f)
+                                    )
+                                    .background(
+                                        brush = Brush.linearGradient(
+                                            colors = listOf(AccentColor, Color(0xFF2E639A))
+                                        ),
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .padding(14.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.School,
+                                    contentDescription = "Education",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                            
+                            // Gamified Stats
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                GamifiedStatBadge("12", "Streak", Color(0xFFF59E0B))
+                                GamifiedStatBadge("450", "XP", PremiumGold)
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Text(
-                            text = "Lab Topics",
+                            text = "Academy",
                             color = Color.White,
                             fontSize = 34.sp,
                             fontWeight = FontWeight.Bold,
@@ -120,21 +133,21 @@ fun LabChaptersScreen(navController: NavController) {
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "Master cybersecurity fundamentals through bite-sized, interactive quests.",
-                            color = Color(0xFFA1A1A6), // Apple grey
+                            text = "Master cybersecurity fundamentals through interactive missions.",
+                            color = Color(0xFFA1A1A6),
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Normal,
                             lineHeight = 24.sp
                         )
                         
-                        Spacer(modifier = Modifier.height(40.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
 
                 // Generic "Start Full Course"
                 item {
                     StartLearningButton(
-                        text = "Play All Chapters",
+                        text = "Resume Mission",
                         icon = Icons.Outlined.PlayArrow,
                         onClick = {
                             navController.navigate(Route.MicrolearningFeed(categoryId = null))
@@ -142,42 +155,128 @@ fun LabChaptersScreen(navController: NavController) {
                     )
                     Spacer(modifier = Modifier.height(32.dp))
                     Text(
-                        text = "CATEGORIES",
+                        text = "LEARNING PATHS",
                         color = Color(0xFF8E8E93),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 1.sp,
-                        modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(start = 8.dp, bottom = 16.dp)
                     )
                 }
 
-                // Dynamic Topics (Topics -> Microlearning)
+                // Dynamic Topics Grid
                 if (categories.isEmpty()) {
                     item {
-                        Text(
-                            text = "Fetching topics from secure vault...",
-                            color = Color(0xFF636366),
-                            fontSize = 15.sp,
-                            modifier = Modifier.padding(top = 16.dp)
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = AccentColor)
+                        }
                     }
                 } else {
-                    items(categories.size) { index ->
-                        val isFirst = index == 0
-                        val isLast = index == categories.size - 1
-                        
-                        TopicListRow(
-                            title = categories[index],
-                            isFirst = isFirst,
-                            isLast = isLast,
-                            onClick = {
-                                navController.navigate(Route.MicrolearningFeed(categoryId = categories[index]))
+                    val chunked = categories.chunked(2)
+                    items(chunked) { rowCategories ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            for (category in rowCategories) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    PremiumCategoryCard(
+                                        title = category,
+                                        onClick = {
+                                            navController.navigate(Route.MicrolearningFeed(categoryId = category))
+                                        }
+                                    )
+                                }
                             }
-                        )
+                            // Fill empty space if odd number of categories
+                            if (rowCategories.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun GamifiedStatBadge(value: String, label: String, color: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .background(Color(0xFF1C1C1E), RoundedCornerShape(12.dp))
+            .border(1.dp, Color(0xFF2C2C2E), RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Text(text = value, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(text = label, color = Color(0xFFA1A1A6), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun PremiumCategoryCard(
+    title: String,
+    onClick: () -> Unit
+) {
+    val haptics = LocalHapticFeedback.current
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(targetValue = if (isPressed) 0.95f else 1f, label = "scale")
+
+    Column(
+        modifier = Modifier
+            .scale(scale)
+            .fillMaxWidth()
+            .aspectRatio(1f) // Square card
+            .shadow(8.dp, RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(Color(0xFF2C2C2E), Color(0xFF1C1C1E))
+                )
+            )
+            .border(1.dp, Color(0xFF38383A), RoundedCornerShape(24.dp))
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    isPressed = true
+                    val up = waitForUpOrCancellation()
+                    isPressed = false
+                    if (up != null) {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onClick()
+                    }
+                }
+            }
+            .padding(20.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(AccentColor.copy(alpha = 0.15f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.LibraryBooks,
+                contentDescription = null,
+                tint = AccentColor,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 22.sp
+        )
     }
 }
 
@@ -222,7 +321,7 @@ private fun TopicListRow(
                 .padding(horizontal = 20.dp, vertical = 18.dp)
         ) {
             Icon(
-                imageVector = Icons.Outlined.LibraryBooks,
+                imageVector = Icons.AutoMirrored.Outlined.LibraryBooks,
                 contentDescription = null,
                 tint = AccentColor,
                 modifier = Modifier.size(22.dp)

@@ -11,12 +11,25 @@ import android.os.FileObserver
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.protctus.app.R
+import com.protctus.app.engine.FileFeatureExtractor
+import com.protctus.app.engine.ProcMalwareEngine
 import com.protctus.app.ui.screens.features.ApkQuarantineActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.io.File
 
+/**
+ * Observes the Downloads directory for newly written APK files.
+ * Routes all APKs through ProcMalwareEngine for verdict.
+ * Only quarantines APKs that receive an actionable verdict (not all APKs).
+ */
 @Suppress("DEPRECATION")
 class ApkDownloadObserver(private val context: Context) : 
     FileObserver(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath, FileObserver.CLOSE_WRITE) {
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onEvent(event: Int, path: String?) {
         if (path == null) return
@@ -24,18 +37,52 @@ class ApkDownloadObserver(private val context: Context) :
         if (path.endsWith(".apk")) {
             val originalFile = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), path)
             if (originalFile.exists()) {
-                Log.w("Protctus", "Suspicious APK detected: $path")
-                val quarantinedFile = File(originalFile.parent, "$path.quarantine")
-                val success = originalFile.renameTo(quarantinedFile)
-                
-                if (success) {
-                    showQuarantineNotification(quarantinedFile.absolutePath, path)
+                // Enqueue scanning on background thread — never block the observer callback
+                scope.launch {
+                    scanAndQuarantineIfMalicious(originalFile, path)
                 }
             }
         }
     }
 
-    private fun showQuarantineNotification(quarantinedPath: String, originalName: String) {
+    /**
+     * Scans the APK through the shared FileFeatureExtractor → ProcMalwareEngine pipeline.
+     * Only quarantines if the engine returns an actionable verdict.
+     */
+    private suspend fun scanAndQuarantineIfMalicious(originalFile: File, fileName: String) {
+        try {
+            val evidence = FileFeatureExtractor.extractEvidence(context, originalFile)
+            if (evidence == null) {
+                Log.w("Protctus", "APK could not be analyzed: $fileName")
+                return
+            }
+
+            val verdict = ProcMalwareEngine.evaluateFile(evidence)
+
+            if (verdict.decision.isActionable) {
+                // Actionable verdict — quarantine the APK
+                Log.w("Protctus", "Malicious APK detected (${verdict.decision.displayName}): $fileName")
+                val quarantinedFile = File(originalFile.parent, "$fileName.quarantine")
+                val success = originalFile.renameTo(quarantinedFile)
+
+                if (success) {
+                    showQuarantineNotification(
+                        quarantinedPath = quarantinedFile.absolutePath,
+                        originalName = fileName,
+                        verdictName = verdict.decision.displayName,
+                        explanation = verdict.explanation
+                    )
+                }
+            } else {
+                // Clean or low-risk — allow the APK without disruption
+                Log.d("Protctus", "APK scanned clean: $fileName (${verdict.decision.displayName})")
+            }
+        } catch (e: Exception) {
+            Log.e("Protctus", "APK scan failed for $fileName", e)
+        }
+    }
+
+    private fun showQuarantineNotification(quarantinedPath: String, originalName: String, verdictName: String, explanation: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         
         val channelId = "apk_quarantine_channel"
@@ -59,8 +106,9 @@ class ApkDownloadObserver(private val context: Context) :
         val notification = NotificationCompat.Builder(context, channelId)
             // Fallback to launcher icon if specific blocker icon is missing
             .setSmallIcon(R.mipmap.ic_launcher_round)
-            .setContentTitle("Suspicious App Suspended")
-            .setContentText("'$originalName' was paused. Tap to verify and install.")
+            .setContentTitle("$verdictName: $originalName")
+            .setContentText(explanation.take(200))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(explanation))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

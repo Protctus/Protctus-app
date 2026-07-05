@@ -29,8 +29,8 @@ class Converters {
 }
 
 @Database(
-    entities = [RecentSearch::class, ThreatAlert::class, UserSettings::class, UserProfile::class, OtpSecurityState::class, NotificationEntity::class, UserSafeList::class, VvipDomain::class, MicrolearningCardData::class, ThreatTelemetry::class, UserStatsEntity::class, com.protctus.app.data.local.entity.QuestEntity::class],
-    version = 12,
+    entities = [RecentSearch::class, ThreatAlert::class, UserSettings::class, UserProfile::class, OtpSecurityState::class, NotificationEntity::class, UserSafeList::class, VvipDomain::class, MicrolearningCardData::class, ThreatTelemetry::class, UserStatsEntity::class, com.protctus.app.data.local.entity.QuestEntity::class, com.protctus.app.data.local.entity.ScannedFileCache::class],
+    version = 14,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -44,6 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun microlearningCardDao(): com.protctus.app.data.local.dao.MicrolearningCardDao
     abstract fun threatTelemetryDao(): com.protctus.app.data.local.dao.ThreatTelemetryDao
     abstract fun questDao(): com.protctus.app.data.local.dao.QuestDao
+    abstract fun scannedFileCacheDao(): com.protctus.app.data.local.dao.ScannedFileCacheDao
 
     companion object {
         @Volatile
@@ -102,6 +103,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `scanned_file_cache` (`filePath` TEXT NOT NULL, `lastModified` INTEGER NOT NULL, `fileSize` INTEGER NOT NULL, `isMalicious` INTEGER NOT NULL, `scanTimestamp` INTEGER NOT NULL, PRIMARY KEY(`filePath`))")
+            }
+        }
+
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `scanned_file_cache` ADD COLUMN `mimeType` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `scanned_file_cache` ADD COLUMN `sha256Hash` TEXT")
+                db.execSQL("ALTER TABLE `scanned_file_cache` ADD COLUMN `verdictDecision` TEXT NOT NULL DEFAULT 'CLEAN'")
+                db.execSQL("ALTER TABLE `scanned_file_cache` ADD COLUMN `verdictScore` REAL NOT NULL DEFAULT 0.0")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -109,7 +125,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
-                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

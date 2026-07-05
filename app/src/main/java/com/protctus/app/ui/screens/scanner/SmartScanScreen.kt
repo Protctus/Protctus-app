@@ -101,7 +101,7 @@ fun SmartScanScreen(navController: NavController, scannerViewModel: ScannerViewM
     }
 
     LaunchedEffect(scanState) {
-        if (scanState == ScanState.SAFE || scanState == ScanState.THREAT_FOUND) {
+        if (scanState == ScanState.COMPLETED) {
             com.protctus.app.utils.QuestTracker.markTaskCompleted(context, "smart_scan")
             
             navController.navigate(Route.ScanResults) {

@@ -12,9 +12,11 @@ import androidx.lifecycle.viewModelScope
 import com.protctus.app.data.local.ThreatAlert
 import com.protctus.app.data.local.ThreatDao
 import com.protctus.app.engine.EliteThreat
-// ThreatBrain REMOVED — all verdicts from malware engines only
 import com.protctus.app.engine.correlation.ThreatCorrelationEngine
-import com.protctus.app.engine.correlation.ThreatVerdict
+import com.protctus.app.engine.ProcMalwareEngine
+import com.protctus.app.engine.SystemEvidence
+import com.protctus.app.engine.AppEvidence
+import com.protctus.app.engine.FileEvidence
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -29,10 +31,9 @@ import kotlinx.coroutines.yield
 import java.io.File
 import javax.inject.Inject
 import com.protctus.app.utils.GlobalQuestTracker
-// import com.protctus.app.utils.QuestEvent
 
 enum class ScanState {
-    IDLE, SCANNING_APPS, SCANNING_FILES, ANALYZING, SAFE, THREAT_FOUND
+    IDLE, SCANNING_APPS, SCANNING_FILES, ANALYZING, COMPLETED
 }
 
 data class SmartScanThreat(
@@ -68,15 +69,6 @@ class ScannerViewModel @Inject constructor(
     private val _scanThreats = MutableStateFlow<List<SmartScanThreat>>(emptyList())
     val scanThreats: StateFlow<List<SmartScanThreat>> = _scanThreats.asStateFlow()
 
-    // VULN-S4 fix: Replaced hardcoded package-name whitelist with installer-source validation.
-    // Apps are now validated by WHO installed them, not by package name (which can be spoofed).
-    private val trustedInstallers = setOf(
-        "com.android.vending",        // Google Play Store
-        "com.sec.android.app.samsungapps", // Samsung Galaxy Store
-        "com.amazon.venezia",         // Amazon App Store
-        "com.huawei.appmarket"        // Huawei AppGallery
-    )
-
     fun togglePause() {
         if (_scanState.value in listOf(ScanState.SCANNING_APPS, ScanState.SCANNING_FILES, ScanState.ANALYZING)) {
             _isPaused.value = !_isPaused.value
@@ -96,55 +88,47 @@ class ScannerViewModel @Inject constructor(
                 val rulesPath = File(context.cacheDir, "rules.yarc").absolutePath
                 try { com.protctus.yaracore.YaraScanner.initYaraEngine(rulesPath) } catch (_: Exception) {}
 
-                // Initialize Threat Correlation Engine (loads Quark and ClamAV rules)
+                // Initialize Threat Correlation Engine
                 val correlationEngine = ThreatCorrelationEngine.getInstance(context)
                 correlationEngine.initialize()
 
-                // --- PHASE 1: DEVICE INTEGRITY (0% - 20%) ---
-                _scanState.value = ScanState.SCANNING_APPS // Reusing state for simplicity or add a new one
+                // --- PHASE 1: DEVICE INTEGRITY ---
+                _scanState.value = ScanState.SCANNING_APPS 
                 _currentScanningItem.value = "Checking Device Integrity..."
                 val integrityThreats = checkDeviceIntegrity(context)
                 allThreats.addAll(integrityThreats)
                 _scanProgress.value = 20f
                 delay(500)
 
-                // --- PHASE 2: APP HEURISTICS (20% - 60%) ---
+                // --- PHASE 2: APP HEURISTICS ---
                 totalItemsScanned = scanInstalledApps(context, allThreats, totalItemsScanned)
                 if (!isActive) return@launch
 
-                // --- PHASE 3: FILE HEURISTICS (60% - 90%) ---
+                // --- PHASE 3: FILE HEURISTICS ---
                 _scanState.value = ScanState.SCANNING_FILES
                 totalItemsScanned = scanFileSystem(allThreats, totalItemsScanned)
                 if (!isActive) return@launch
 
-                // --- PHASE 4: COMPILING RESULTS (90% - 100%) ---
+                // --- PHASE 4: COMPILING RESULTS ---
                 _scanState.value = ScanState.ANALYZING
                 finalizeScan()
 
                 _scanThreats.value = allThreats
-                
-                val hasActualMalware = allThreats.any { 
-                    val risk = it.riskScore.substringBefore("/").toFloatOrNull() ?: 0f
-                    risk >= 6.0f 
-                }
-                
-                _scanState.value = if (hasActualMalware) ScanState.THREAT_FOUND else ScanState.SAFE
+                _scanState.value = ScanState.COMPLETED
 
                 // ── Persist results to Room DB → Threat Feed & Notifications ──
                 persistScanResultsToDb(allThreats, totalItemsScanned)
 
             } catch (e: Exception) {
                 Log.e("SmartScan", "Critical Error during scan: ${e.message}")
-                _scanState.value = ScanState.SAFE // Graceful degradation
+                _scanState.value = ScanState.COMPLETED 
             } finally {
                 try { com.protctus.yaracore.YaraScanner.destroyYaraEngine() } catch (_: Exception) {}
             }
         }
     }
 
-    /** Write each detected threat + a summary alert into the Room threat_alerts table. */
     private suspend fun persistScanResultsToDb(threats: List<SmartScanThreat>, totalScanned: Int) {
-        // Insert each individual threat
         for (threat in threats) {
             threatDao.insertThreat(
                 ThreatAlert(
@@ -157,7 +141,6 @@ class ScannerViewModel @Inject constructor(
                 )
             )
 
-            // Upload malware telemetry to cloud (salted hash, fire-and-forget)
             val riskVal = threat.riskScore.substringBefore("/").toFloatOrNull() ?: 0f
             if (riskVal >= 5f) {
                 com.protctus.app.utils.MalwareTelemetryReporter.reportMalware(
@@ -169,7 +152,7 @@ class ScannerViewModel @Inject constructor(
                 )
             }
         }
-        // Insert summary alert
+        
         val hasActualMalware = threats.any { 
             val risk = it.riskScore.substringBefore("/").toFloatOrNull() ?: 0f
             risk >= 6.0f 
@@ -186,13 +169,9 @@ class ScannerViewModel @Inject constructor(
             )
         )
 
-        // Mark quest as completed locally via Event Bus
         globalQuestTracker.emitEvent("smart_scan")
     }
 
-    // ==========================================
-    // MODULE 1: APP SCANNING ENGINE
-    // ==========================================
     private suspend fun scanInstalledApps(context: Context, threats: MutableList<SmartScanThreat>, startCount: Int): Int {
         var currentCount = startCount
         val pm = context.packageManager
@@ -200,10 +179,11 @@ class ScannerViewModel @Inject constructor(
         val packages = try {
             pm.getInstalledPackages(PackageManager.GET_PERMISSIONS)
         } catch (e: Exception) {
-            emptyList<PackageInfo>() // Failsafe for modified OS ROMs
+            emptyList<PackageInfo>() 
         }
         
         val totalApps = packages.size
+        val safeInstallSources = listOf("com.android.vending", "com.sec.android.app.samsungapps", "com.amazon.venezia", "com.huawei.appmarket")
 
         packages.forEachIndexed { index, packageInfo ->
             checkPause()
@@ -213,22 +193,52 @@ class ScannerViewModel @Inject constructor(
             if (pkgName == context.packageName) return@forEachIndexed
 
             val isSystemApp = (packageInfo.applicationInfo?.flags?.and(ApplicationInfo.FLAG_SYSTEM) ?: 0) != 0
-
-            // FN-FIX: ALL user apps go through the correlation engine.
-            // Previously, store-installed apps were SKIPPED entirely — this was the #1 false negative source.
-            // The correlation engine handles evidence weighting internally.
-            if (!isSystemApp) {
-                evaluateAppRisk(pm, packageInfo, threats)
-            }
             
             val appLabel = packageInfo.applicationInfo?.loadLabel(pm)?.toString() ?: pkgName
             _currentScanningItem.value = appLabel
 
+            try {
+                val correlationEngine = ThreatCorrelationEngine.getInstance(appContext)
+                val verdictResult = correlationEngine.correlateSmartScan(pm, packageInfo)
+
+                val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    try { pm.getInstallSourceInfo(pkgName).installingPackageName } catch (_: Exception) { null }
+                } else {
+                    @Suppress("DEPRECATION") pm.getInstallerPackageName(pkgName)
+                }
+                val isSideloaded = installer == null || !safeInstallSources.contains(installer)
+                
+                val evidence = AppEvidence(
+                    packageName = pkgName,
+                    appLabel = appLabel,
+                    isSystemApp = isSystemApp,
+                    isSideloaded = isSideloaded,
+                    correlationVerdict = verdictResult
+                )
+
+                val engineVerdict = ProcMalwareEngine.evaluateApp(evidence)
+
+                if (engineVerdict.decision.isActionable) {
+                    threats.add(
+                        SmartScanThreat(
+                            appName = appLabel,
+                            packageName = pkgName,
+                            threatType = engineVerdict.decision.displayName,
+                            riskScore = String.format("%.1f/10", engineVerdict.finalScore),
+                            detailedReason = engineVerdict.explanation
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("SmartScan", "Correlation engine failed for $pkgName: ${e.message}")
+            }
+
             currentCount++
             _scannedItemsCount.value = currentCount
             _scanProgress.value = (index.toFloat() / totalApps.toFloat()) * 50f
-            yield()
-            delay(30) // Increased to ensure no thermal throttling
+            if (index % 20 == 0) {
+                kotlinx.coroutines.delay(10) 
+            }
         }
         return currentCount
     }
@@ -236,100 +246,42 @@ class ScannerViewModel @Inject constructor(
     private fun checkDeviceIntegrity(context: Context): List<SmartScanThreat> {
         val integrityThreats = mutableListOf<SmartScanThreat>()
 
-        // Device configuration warnings — NOT malware verdicts.
-        // These are settings checks, not engine-driven detections.
+        val unknownSources = com.protctus.app.utils.SecurityScanner.checkUnknownSourcesEnabled(context)
+        val adbEnabled = android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.ADB_ENABLED, 0) == 1
+        val isRooted = com.protctus.app.utils.SecurityScanner.checkDeepRootSignatures()
 
-        // 1. Unknown Sources
-        if (com.protctus.app.utils.SecurityScanner.checkUnknownSourcesEnabled(context)) {
+        val evidence = SystemEvidence(
+            unknownSourcesEnabled = unknownSources,
+            adbEnabled = adbEnabled,
+            isRooted = isRooted
+        )
+
+        val verdict = ProcMalwareEngine.evaluateSystemIntegrity(evidence)
+
+        if (verdict.decision.isActionable) {
             integrityThreats.add(SmartScanThreat(
                 appName = "System Settings",
                 packageName = "android.settings.security",
-                threatType = "Configuration Warning",
-                riskScore = "3.0/10",
-                detailedReason = "Unknown Sources enabled — allows untrusted app installations."
-            ))
-        }
-
-        // 2. ADB
-        val adbEnabled = android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.ADB_ENABLED, 0) == 1
-        if (adbEnabled) {
-            integrityThreats.add(SmartScanThreat(
-                appName = "Developer Options",
-                packageName = "android.settings.development",
-                threatType = "Configuration Warning",
-                riskScore = "2.0/10",
-                detailedReason = "USB Debugging (ADB) is active — enables external code execution."
-            ))
-        }
-
-        // 3. Root
-        if (com.protctus.app.utils.SecurityScanner.checkDeepRootSignatures()) {
-            integrityThreats.add(SmartScanThreat(
-                appName = "Android OS",
-                packageName = "system.kernel.root",
-                threatType = "Configuration Warning",
-                riskScore = "5.0/10",
-                detailedReason = "Device is rooted — system sandbox is compromised."
+                threatType = verdict.decision.displayName,
+                riskScore = "${verdict.finalScore}/10.0",
+                detailedReason = verdict.explanation
             ))
         }
 
         return integrityThreats
     }
 
-    private suspend fun evaluateAppRisk(pm: PackageManager, packageInfo: PackageInfo, threats: MutableList<SmartScanThreat>) {
-        val pkgName = packageInfo.packageName
-
-        // Check for Sideload status first (Information/Warning level)
-        val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try { pm.getInstallSourceInfo(pkgName).installingPackageName } catch (_: Exception) { null }
-        } else {
-            @Suppress("DEPRECATION") pm.getInstallerPackageName(pkgName)
-        }
-        val isSideloaded = installer == null || !trustedInstallers.contains(installer)
-
-        try {
-            val correlationEngine = ThreatCorrelationEngine.getInstance(appContext)
-            val verdictResult = correlationEngine.correlateSmartScan(pm, packageInfo)
-
-            if (verdictResult.isActionable) {
-                // We have a correlated threat
-                threats.add(
-                    SmartScanThreat(
-                        appName = verdictResult.appLabel,
-                        packageName = pkgName,
-                        threatType = verdictResult.finalVerdict.displayName,
-                        riskScore = String.format("%.1f/10", verdictResult.displayRiskScore),
-                        detailedReason = verdictResult.shortSummary
-                    )
-                )
-            }
-        } catch (e: Exception) {
-            Log.e("SmartScan", "Correlation engine failed for $pkgName: ${e.message}")
-        }
-    }
-
-    // ==========================================
-    // MODULE 2: FILE SCANNING ENGINE
-    // ==========================================
     private suspend fun scanFileSystem(threats: MutableList<SmartScanThreat>, startCount: Int): Int {
         var currentCount = startCount
-
-        // VULN-S1 fix: Scan multiple directories, not just Downloads
         val dirsToScan = mutableListOf<File>()
 
-        // Standard public directories (Restricted for Smart Scan)
-        arrayOf(
-            Environment.DIRECTORY_DOWNLOADS
-        ).forEach { dirType ->
+        arrayOf(Environment.DIRECTORY_DOWNLOADS).forEach { dirType ->
             val dir = Environment.getExternalStoragePublicDirectory(dirType)
             if (dir != null && dir.exists() && dir.isDirectory) dirsToScan.add(dir)
         }
 
-        // Messaging app media directories (common malware delivery paths)
         val storageRoot = Environment.getExternalStorageDirectory()
-        listOf(
-            "Bluetooth"
-        ).forEach { relPath ->
+        listOf("Bluetooth").forEach { relPath ->
             val dir = File(storageRoot, relPath)
             if (dir.exists() && dir.isDirectory) dirsToScan.add(dir)
         }
@@ -360,58 +312,102 @@ class ScannerViewModel @Inject constructor(
             currentCount++
             _scannedItemsCount.value = currentCount
             _scanProgress.value = 50f + ((index.toFloat() / totalFiles.toFloat()) * 40f)
-            yield()
-            delay(30) // Increased to ensure no thermal throttling
+            if (index % 100 == 0) {
+                kotlinx.coroutines.delay(50) 
+            }
         }
         return currentCount
     }
 
-    /**
-     * Lightweight file risk evaluation for Smart Scan.
-     * Checks file extension and double-extension social engineering tricks.
-     */
     private suspend fun evaluateFileRisk(file: File, threats: MutableList<SmartScanThreat>) {
         try {
-            // Engine-only file scanning — ThreatBrain REMOVED
+            val ext = file.extension.lowercase()
+            val riskyExts = setOf("apk", "dex", "so", "jar", "sh", "bat", "cmd", "ps1", "exe", "dll", "bin", "elf", "msi", "vbs", "js", "zip", "rar", "7z", "tar", "gz", "xz", "bz2", "cab", "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "rtf", "csv")
+            
+            if (!riskyExts.contains(ext)) return
 
-            // 1. YARA Signature Scan (if file is reasonably sized)
+            val yaraMatches = mutableListOf<String>()
+            val clamAvMatches = mutableListOf<String>()
+            var fileEntropy: Double? = null
+            var hasDoubleExtension = false
+            var hasRTLO = false
+
             if (file.length() in 1..(50 * 1024 * 1024)) {
                 try {
                     val matches = com.protctus.yaracore.YaraScanner.scanRawFile(file.absolutePath)
-                    if (matches.isNotEmpty()) {
-                        threats.add(
-                            SmartScanThreat(
-                                appName = file.name,
-                                packageName = file.absolutePath,
-                                threatType = ThreatVerdict.HIGH_CONFIDENCE_MALWARE.displayName,
-                                riskScore = "${ThreatVerdict.HIGH_CONFIDENCE_MALWARE.score / 10f}/10.0",
-                                detailedReason = "Matched signature rules: ${matches.joinToString(", ")}"
-                            )
-                        )
-                        return
+                    yaraMatches.addAll(matches)
+                } catch (_: Exception) {}
+
+                try {
+                    val clamEngine = com.protctus.app.engine.clam.ClamSignatureEngine.getInstance(appContext)
+                    if (clamEngine.ready) {
+                        val match = clamEngine.scanFileHash(file)
+                        if (match != null) clamAvMatches.add(match.malwareName)
                     }
                 } catch (_: Exception) {}
             }
-
-            // 2. ClamAV hash scan for known malware
-            try {
-                val clamEngine = com.protctus.app.engine.clam.ClamSignatureEngine.getInstance(appContext)
-                if (clamEngine.ready && file.length() in 1..(50 * 1024 * 1024)) {
-                    val match = clamEngine.scanFileHash(file)
-                    if (match != null) {
-                        threats.add(
-                            SmartScanThreat(
-                                appName = file.name,
-                                packageName = file.absolutePath,
-                                threatType = ThreatVerdict.HIGH_CONFIDENCE_MALWARE.displayName,
-                                riskScore = "${ThreatVerdict.HIGH_CONFIDENCE_MALWARE.score / 10f}/10.0",
-                                detailedReason = "Signature match: ${match.malwareName} (${match.matchType})"
-                            )
-                        )
-                        return
+            
+            if (ext == "apk") {
+                val sampleSize = 8192
+                val freq = IntArray(256)
+                var totalBytes = 0
+                try {
+                    java.io.FileInputStream(file).use { fis ->
+                        val buf = ByteArray(sampleSize)
+                        val read = fis.read(buf)
+                        if (read > 0) {
+                            for (i in 0 until read) freq[buf[i].toInt() and 0xFF]++
+                            totalBytes = read
+                        }
                     }
-                }
-            } catch (_: Exception) {}
+                    if (totalBytes > 0) {
+                        var entropy = 0.0
+                        for (count in freq) {
+                            if (count > 0) {
+                                val p = count.toDouble() / totalBytes
+                                entropy -= p * (kotlin.math.ln(p) / kotlin.math.ln(2.0))
+                            }
+                        }
+                        fileEntropy = entropy
+                    }
+                } catch (e: Exception) {}
+            }
+
+            hasRTLO = file.name.contains("\u202E")
+            if (file.name.count { it == '.' } >= 2) {
+                hasDoubleExtension = true
+            }
+            
+            val evidence = FileEvidence(
+                fileName = file.name,
+                absolutePath = file.absolutePath,
+                extension = ext,
+                fileSize = file.length(),
+                yaraMatches = yaraMatches,
+                clamAvMatches = clamAvMatches,
+                entropy = fileEntropy,
+                isApkInWrongPlace = false,
+                hasDoubleExtension = hasDoubleExtension,
+                hasRTLO = hasRTLO,
+                hasEOCDAtEnd = false,
+                archiveRatio = null,
+                archiveTraversal = false,
+                hasEmbeddedExecutable = false
+            )
+
+            val engineVerdict = ProcMalwareEngine.evaluateFile(evidence)
+
+            if (engineVerdict.decision.isActionable) {
+                threats.add(
+                    SmartScanThreat(
+                        appName = file.name,
+                        packageName = file.absolutePath,
+                        threatType = engineVerdict.decision.displayName,
+                        riskScore = "${engineVerdict.finalScore}/10.0",
+                        detailedReason = engineVerdict.explanation
+                    )
+                )
+            }
         } catch (_: Exception) { }
     }
 
@@ -446,7 +442,7 @@ class ScannerViewModel @Inject constructor(
 
 // -------------------------------------------------------------
 // Core System Evaluation Engine Logic (used by SentinelService)
-// Uses ThreatCorrelationEngine instead of ThreatBrain
+// Uses ThreatCorrelationEngine -> ProcMalwareEngine
 // -------------------------------------------------------------
 
 suspend fun scanDevice(context: Context): List<EliteThreat> = withContext(Dispatchers.Default) {
@@ -466,20 +462,39 @@ suspend fun scanDevice(context: Context): List<EliteThreat> = withContext(Dispat
 
     val installedPackages = pm.getInstalledPackages(flags)
     val threats = mutableListOf<EliteThreat>()
+    val safeInstallSources = listOf("com.android.vending", "com.sec.android.app.samsungapps", "com.amazon.venezia", "com.huawei.appmarket")
 
     for (packageInfo in installedPackages) {
-        // Don't skip ANY app — all apps go through correlation
         val isSystem = packageInfo.applicationInfo?.let { (it.flags and ApplicationInfo.FLAG_SYSTEM) != 0 } ?: false
-        if (isSystem) continue // Only skip system apps
+        if (isSystem) continue 
 
         try {
             val verdict = correlationEngine.correlateSmartScan(pm, packageInfo)
-            if (verdict.finalVerdict.score >= ThreatVerdict.SUSPICIOUS.score) {
+            val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                try { pm.getInstallSourceInfo(packageInfo.packageName).installingPackageName } catch (_: Exception) { null }
+            } else {
+                @Suppress("DEPRECATION") pm.getInstallerPackageName(packageInfo.packageName)
+            }
+            val isSideloaded = installer == null || !safeInstallSources.contains(installer)
+            
+            val appLabel = packageInfo.applicationInfo?.loadLabel(pm)?.toString() ?: packageInfo.packageName
+
+            val evidence = AppEvidence(
+                packageName = packageInfo.packageName,
+                appLabel = appLabel,
+                isSystemApp = isSystem,
+                isSideloaded = isSideloaded,
+                correlationVerdict = verdict
+            )
+            
+            val engineVerdict = ProcMalwareEngine.evaluateApp(evidence)
+
+            if (engineVerdict.decision.isActionable) {
                 threats.add(EliteThreat(
-                    packageName = verdict.packageName,
-                    appName = verdict.appLabel,
-                    riskScore = (verdict.finalProbability * 100).toInt().coerceAtMost(100),
-                    detectedAnomalies = verdict.explanation.topReasons
+                    packageName = packageInfo.packageName,
+                    appName = appLabel,
+                    riskScore = (engineVerdict.finalScore * 10).toInt().coerceAtMost(100),
+                    detectedAnomalies = listOf(engineVerdict.explanation)
                 ))
             }
         } catch (_: Exception) {}
@@ -514,13 +529,33 @@ suspend fun scanSinglePackage(context: Context, packageName: String): EliteThrea
     val correlationEngine = ThreatCorrelationEngine.getInstance(context)
     correlationEngine.initialize()
     val verdict = correlationEngine.correlateSmartScan(pm, packageInfo)
+    
+    val safeInstallSources = listOf("com.android.vending", "com.sec.android.app.samsungapps", "com.amazon.venezia", "com.huawei.appmarket")
+    val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        try { pm.getInstallSourceInfo(packageName).installingPackageName } catch (_: Exception) { null }
+    } else {
+        @Suppress("DEPRECATION") pm.getInstallerPackageName(packageName)
+    }
+    val isSideloaded = installer == null || !safeInstallSources.contains(installer)
+    val appLabel = packageInfo.applicationInfo?.loadLabel(pm)?.toString() ?: packageName
+    val isSystem = ((packageInfo.applicationInfo?.flags ?: 0) and ApplicationInfo.FLAG_SYSTEM) != 0
 
-    if (verdict.finalVerdict.score >= ThreatVerdict.SUSPICIOUS.score) {
+    val evidence = AppEvidence(
+        packageName = packageName,
+        appLabel = appLabel,
+        isSystemApp = isSystem,
+        isSideloaded = isSideloaded,
+        correlationVerdict = verdict
+    )
+
+    val engineVerdict = ProcMalwareEngine.evaluateApp(evidence)
+
+    if (engineVerdict.decision.isActionable) {
         EliteThreat(
-            packageName = verdict.packageName,
-            appName = verdict.appLabel,
-            riskScore = (verdict.finalProbability * 100).toInt().coerceAtMost(100),
-            detectedAnomalies = verdict.explanation.topReasons
+            packageName = packageName,
+            appName = appLabel,
+            riskScore = (engineVerdict.finalScore * 10).toInt().coerceAtMost(100),
+            detectedAnomalies = listOf(engineVerdict.explanation)
         )
     } else {
         null

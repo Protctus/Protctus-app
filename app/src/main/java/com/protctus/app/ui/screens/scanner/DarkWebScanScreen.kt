@@ -18,10 +18,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
@@ -47,92 +44,42 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.google.firebase.auth.FirebaseAuth
 import com.protctus.app.network.BreachDetail
-import com.protctus.app.network.DarkWebApiClient
-import com.protctus.app.network.DarkWebScanResult
 import com.protctus.app.utils.PdfReportGenerator
 import com.protctus.app.viewmodel.HomeViewModel
+import com.protctus.app.viewmodel.DarkWebViewModel
+import com.protctus.app.viewmodel.DarkWebScanState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.async
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlin.math.cos
 import kotlin.math.sin
-
-enum class DarkWebScanState { IDLE, SCANNING, PAUSED, COMPLETED }
 
 @Composable
 fun DarkWebScanScreen(navController: NavController) {
     val context = LocalContext.current
     val homeViewModel: HomeViewModel = hiltViewModel()
-    
     val settingsViewModel: com.protctus.app.viewmodel.SettingsViewModel = hiltViewModel()
+    val darkWebViewModel: DarkWebViewModel = hiltViewModel()
+    
     val profile by settingsViewModel.profile.collectAsState()
     val username by homeViewModel.username.collectAsState()
     val realEmail = profile.email.takeIf { it.isNotBlank() } ?: "unknown"
 
-    var scanState by remember { mutableStateOf(DarkWebScanState.IDLE) }
-    var scanResult by remember { mutableStateOf<DarkWebScanResult?>(null) }
+    val scanState by darkWebViewModel.scanState.collectAsState()
+    val scanResult by darkWebViewModel.scanResult.collectAsState()
     var showPromo by remember { mutableStateOf(false) }
-    val isAnimating = scanState == DarkWebScanState.SCANNING
+
+    val isAnimating = scanState == DarkWebScanState.SCANNING || scanState == DarkWebScanState.VALIDATING
 
     val outerRotation = remember { Animatable(0f) }
     val innerRotation = remember { Animatable(360f) }
     val pulseAlpha = remember { Animatable(0.3f) }
     val atomScale = remember { Animatable(0.92f) }
 
-    // Get Room DB for persisting scan results to Threat Feed & Notifications
-    val threatDao = remember { com.protctus.app.data.local.AppDatabase.getInstance(context).threatDao() }
-    val scanScope = rememberCoroutineScope()
-
+    // Trigger Promo Display briefly after scan completes securely
     LaunchedEffect(scanState) {
-        if (scanState == DarkWebScanState.SCANNING) {
-            // Reset previous results on re-scan
-            scanResult = null
-            showPromo = false
-
-            val email = realEmail.takeIf { it != "unknown" } ?: ""
-
-            // Run API call and minimum animation delay concurrently
-            val resultDeferred = scanScope.async {
-                if (email.isNotBlank()) {
-                    DarkWebApiClient.scanEmail(email)
-                } else {
-                    DarkWebScanResult(isSafe = false, details = listOf("No email configured"), scannedEmail = "Unknown")
-                }
-            }
-            // Ensure animation plays for at least 4 seconds
-            delay(4000)
-
-            val result = resultDeferred.await()
-            scanResult = result
-            scanState = DarkWebScanState.COMPLETED
-
-            // Persist scan result to Room DB → appears in Threat Feed & Notifications
-            scanScope.launch {
-                val alert = com.protctus.app.data.local.ThreatAlert(
-                    title = if (result.isSafe) "Dark Web Scan — Safe" else "Dark Web Breach Detected",
-                    description = if (result.isSafe) {
-                        "No breaches found for ${result.scannedEmail.ifEmpty { email }}."
-                    } else {
-                        val detailsSafe = result.details as? List<String> ?: emptyList()
-                        "${result.breachCount} breach(es) found for ${result.scannedEmail.ifEmpty { email }}. ${detailsSafe.take(2).joinToString(", ")}"
-                    },
-                    priority = if (result.isSafe) "Low" else "High",
-                    threatType = "Dark Web Scan",
-                    priorityColorHex = if (result.isSafe) "#10B981" else "#EF4444",
-                    timestamp = System.currentTimeMillis()
-                )
-                threatDao.insertThreat(alert)
-                
-                // Mark quest as completed locally
-                // Statefully complete the active quest if it was a Dark Web scan
-                com.protctus.app.utils.QuestTracker.markTaskCompleted(context, "dark_web_scan")
-            }
-
-            // Show promo after a brief delay so results render first
-            delay(1800)
+        if (scanState == DarkWebScanState.COMPLETED && scanResult?.isError == false) {
+            delay(1500)
             showPromo = true
         }
     }
@@ -165,7 +112,6 @@ fun DarkWebScanScreen(navController: NavController) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Base Screen UI
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -241,42 +187,15 @@ fun DarkWebScanScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            val scanningEmail = realEmail
-
-            // Dynamic cycling database names during scan
-            val scanDatabases = remember { listOf(
-                "Scanning 2024 breach records...",
-                "Checking compromised credentials...",
-                "Querying LinkedIn data leak...",
-                "Scanning Adobe breach database...",
-                "Checking Dropbox compromised records...",
-                "Querying Collection-1 dump...",
-                "Scanning darknet marketplace leaks...",
-                "Checking 2025 data exposures...",
-                "Querying Canva breach records...",
-                "Scanning MyFitnessPal data leak...",
-                "Checking 500+ known breach databases...",
-                "Cross-referencing credential dumps..."
-            ) }
-            var currentDbIndex by remember { mutableIntStateOf(0) }
-
-            LaunchedEffect(isAnimating) {
-                if (isAnimating) {
-                    while (true) {
-                        delay(1600)
-                        currentDbIndex = (currentDbIndex + 1) % scanDatabases.size
-                    }
-                }
-            }
-
             val statusText = when (scanState) {
                 DarkWebScanState.IDLE -> "Ready to scan your digital footprint"
-                DarkWebScanState.SCANNING -> scanDatabases[currentDbIndex]
+                DarkWebScanState.VALIDATING -> "Validating profile settings..."
+                DarkWebScanState.SCANNING -> "Querying secure breach records..."
                 DarkWebScanState.PAUSED -> "Scan Paused"
-                DarkWebScanState.COMPLETED -> if (scanResult?.isSafe == true) "Your data is safe" else "Breach detected!"
+                DarkWebScanState.COMPLETED -> if (scanResult?.isError == true) "Network Error" else if (scanResult?.isSafe == true) "Your data is safe" else "Breach detected!"
             }
             val statusColor = if (scanState == DarkWebScanState.COMPLETED) {
-                if (scanResult?.isSafe == true) Color(0xFF10B981) else Color(0xFFEF4444)
+                if (scanResult?.isError == true) Color(0xFFF59E0B) else if (scanResult?.isSafe == true) Color(0xFF10B981) else Color(0xFFEF4444)
             } else Color(0xFFB0B0B0)
 
             Text(text = statusText, color = statusColor, fontSize = 13.sp,
@@ -284,11 +203,11 @@ fun DarkWebScanScreen(navController: NavController) {
                 modifier = Modifier.alpha(if (isAnimating) pulseAlpha.value else 1f),
                 textAlign = TextAlign.Center)
 
-            // Show scanned email
             if (scanState == DarkWebScanState.SCANNING || scanState == DarkWebScanState.COMPLETED) {
                 Spacer(modifier = Modifier.height(8.dp))
+                val displayedEmail = scanResult?.scannedEmail?.takeIf { it.isNotBlank() } ?: realEmail
                 Text(
-                    text = scanningEmail,
+                    text = displayedEmail,
                     color = Color(0xFF7F909F),
                     fontSize = 11.sp,
                     textAlign = TextAlign.Center
@@ -302,11 +221,10 @@ fun DarkWebScanScreen(navController: NavController) {
                     .background(com.protctus.app.ui.theme.SurfaceColor, RoundedCornerShape(12.dp))
                     .clip(RoundedCornerShape(12.dp))
                     .clickable {
-                        scanState = when (scanState) {
-                            DarkWebScanState.IDLE -> DarkWebScanState.SCANNING
-                            DarkWebScanState.SCANNING -> DarkWebScanState.PAUSED
-                            DarkWebScanState.PAUSED -> DarkWebScanState.SCANNING
-                            DarkWebScanState.COMPLETED -> DarkWebScanState.SCANNING
+                        when (scanState) {
+                            DarkWebScanState.IDLE, DarkWebScanState.COMPLETED -> darkWebViewModel.startScan(context, realEmail)
+                            DarkWebScanState.SCANNING, DarkWebScanState.PAUSED -> darkWebViewModel.togglePause()
+                            else -> {}
                         }
                     }
                     .padding(horizontal = 32.dp, vertical = 14.dp),
@@ -319,6 +237,7 @@ fun DarkWebScanScreen(navController: NavController) {
                         DarkWebScanState.SCANNING -> "Pause Scan"
                         DarkWebScanState.PAUSED -> "Resume Scan"
                         DarkWebScanState.COMPLETED -> "Scan Again"
+                        DarkWebScanState.VALIDATING -> "Validating..."
                     },
                     color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp
                 )
@@ -337,11 +256,10 @@ fun DarkWebScanScreen(navController: NavController) {
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.7f))
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                        scanState = DarkWebScanState.IDLE
+                        darkWebViewModel.resetState()
                     },
                 contentAlignment = Alignment.BottomCenter
             ) {
-                // Bottom sheet style dialog
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -349,7 +267,6 @@ fun DarkWebScanScreen(navController: NavController) {
                         .background(Color(0xFF1C1919), RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                 ) {
-                    // Handle bar
                     Box(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
@@ -358,7 +275,6 @@ fun DarkWebScanScreen(navController: NavController) {
                             .background(Color(0xFF4A5568), RoundedCornerShape(2.dp))
                     )
 
-                    // Header
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -369,15 +285,14 @@ fun DarkWebScanScreen(navController: NavController) {
                             val r = scanResult
                             if (r != null) {
                                 Text(
-                                    text = if (r.isSafe) "No breaches found" else "${r.breachCount} breach(es) detected",
-                                    color = if (r.isSafe) Color(0xFF10B981) else Color(0xFFEF4444),
+                                    text = if (r.isError) "Scan Failed" else if (r.isSafe) "No breaches found" else "${r.breachCount} breach(es) detected",
+                                    color = if (r.isError) Color(0xFFF59E0B) else if (r.isSafe) Color(0xFF10B981) else Color(0xFFEF4444),
                                     fontSize = 12.sp
                                 )
                             }
                         }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Download PDF
                             val pdfScope = rememberCoroutineScope()
                             IconButton(onClick = {
                                 pdfScope.launch {
@@ -396,7 +311,7 @@ fun DarkWebScanScreen(navController: NavController) {
                                 Icon(Icons.Rounded.Download, contentDescription = "Download PDF", tint = Color(0xFF7F909F))
                             }
 
-                            IconButton(onClick = { scanState = DarkWebScanState.IDLE }) {
+                            IconButton(onClick = { darkWebViewModel.resetState() }) {
                                 Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Color(0xFF9E9E9E))
                             }
                         }
@@ -406,8 +321,26 @@ fun DarkWebScanScreen(navController: NavController) {
 
                     val result = scanResult
                     if (result != null) {
-                        if (result.isSafe) {
-                            // Safe state
+                        if (result.isError) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF59E0B),
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text("Scan Failed", color = Color(0xFFF59E0B), fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    result.errorMessage ?: "A network error occurred. Please try again.",
+                                    color = Color(0xFF7F909F), fontSize = 13.sp, textAlign = TextAlign.Center
+                                )
+                            }
+                        } else if (result.isSafe) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(32.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
@@ -427,11 +360,10 @@ fun DarkWebScanScreen(navController: NavController) {
                                 )
                                 Spacer(modifier = Modifier.height(24.dp))
                                 ScanMetaRow("Scanned Email", result.scannedEmail.ifEmpty { realEmail })
-                                ScanMetaRow("Databases Checked", "500+ known breach records")
+                                ScanMetaRow("Databases Checked", "Live breach records")
                                 ScanMetaRow("Risk Level", "LOW", Color(0xFF10B981))
                             }
                         } else {
-                            // Breaches list
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
@@ -439,7 +371,7 @@ fun DarkWebScanScreen(navController: NavController) {
                             ) {
                                 item {
                                     ScanMetaRow("Scanned Email", result.scannedEmail.ifEmpty { realEmail })
-                                    ScanMetaRow("Databases Checked", "500+ known breach records")
+                                    ScanMetaRow("Databases Checked", "Live breach records")
                                     ScanMetaRow("Total Breaches Found", "${result.breachCount}", Color(0xFFEF4444))
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(stringResource(R.string.detailed_breach_report), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -597,7 +529,6 @@ fun BreachDetailCard(breach: BreachDetail) {
             .fillMaxWidth()
             .background(Color(0xFF2A2B31), RoundedCornerShape(12.dp))
     ) {
-        // Top banner
         Row(
             modifier = Modifier.fillMaxWidth()
                 .background(riskColor.copy(alpha = 0.12f), RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))

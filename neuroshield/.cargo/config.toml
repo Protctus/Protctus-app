@@ -1,0 +1,53 @@
+# NeuroShield — Android NDK Cross-Compilation Configuration
+#
+# ═══════════════════════════════════════════════════════════
+#  PREREQUISITES
+# ═══════════════════════════════════════════════════════════
+#
+#   1. Android NDK r27+ installed. Set ANDROID_NDK_HOME:
+#        Windows:  set ANDROID_NDK_HOME=C:\Users\<you>\AppData\Local\Android\Sdk\ndk\27.0.12077973
+#        Linux:    export ANDROID_NDK_HOME=$HOME/Android/Sdk/ndk/27.0.12077973
+#
+#   2. Rust Android targets installed:
+#        rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+#
+#   3. cargo-ndk installed:
+#        cargo install cargo-ndk
+#
+# ═══════════════════════════════════════════════════════════
+#  BUILD COMMANDS
+# ═══════════════════════════════════════════════════════════
+#
+#   Debug (arm64 only, fast iteration):
+#     cargo ndk -t arm64-v8a build
+#
+#   Release (all ABIs, output to jniLibs):
+#     cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o ../app/src/main/jniLibs build --release
+#
+#   Host tests (no NDK needed):
+#     cargo test
+#     cargo clippy -- -D warnings
+#
+# ═══════════════════════════════════════════════════════════
+#  OUTPUT
+# ═══════════════════════════════════════════════════════════
+#
+#   ../app/src/main/jniLibs/arm64-v8a/libns_engine.so
+#   ../app/src/main/jniLibs/armeabi-v7a/libns_engine.so
+#   ../app/src/main/jniLibs/x86_64/libns_engine.so
+
+# cargo-ndk auto-detects linkers from ANDROID_NDK_HOME.
+# Uncomment and set paths below ONLY for direct cross-compilation
+# without cargo-ndk (CI environments, custom toolchains, etc).
+#
+# [target.aarch64-linux-android]
+# linker = "aarch64-linux-android27-clang"
+#
+# [target.armv7-linux-androideabi]
+# linker = "armv7a-linux-androideabi27-clang"
+#
+# [target.x86_64-linux-android]
+# linker = "x86_64-linux-android27-clang"
+#
+# [target.i686-linux-android]
+# linker = "i686-linux-android27-clang"

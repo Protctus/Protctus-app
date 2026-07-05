@@ -61,6 +61,7 @@ class MainActivity : AppCompatActivity(), com.razorpay.PaymentResultWithDataList
     private val pendingSharedUrl = MutableStateFlow<String?>(null)
     private val pendingThreatRoute = MutableStateFlow<Boolean>(false)
     private val vpnBlockedUrl = MutableStateFlow<String?>(null)
+    private val vpnBlockedUsb = MutableStateFlow<Boolean>(false)
     private val triggerUpdateCheck = MutableStateFlow<Boolean>(false)
 
     // Activity-scoped PremiumViewModel so Razorpay callbacks can reach it
@@ -176,6 +177,21 @@ class MainActivity : AppCompatActivity(), com.razorpay.PaymentResultWithDataList
                         vpnBlockedUrl.value = null
                     }
                 }
+                
+                val showUsbAlert by vpnBlockedUsb.collectAsState()
+                LaunchedEffect(showUsbAlert) {
+                    if (showUsbAlert) {
+                        navController.navigate(Route.ThreatResolution(
+                            packageName = "USB_SHIELD",
+                            title = "Hostile USB Detected",
+                            description = "A malicious physical connection with data-transfer capability was blocked. Please unplug the device immediately."
+                        )) {
+                            popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                        vpnBlockedUsb.value = false
+                    }
+                }
 
                 com.protctus.app.ui.SettingsSideEffects(mainViewModel)
                 com.protctus.app.ui.DeepLinkRouter(
@@ -257,6 +273,10 @@ class MainActivity : AppCompatActivity(), com.razorpay.PaymentResultWithDataList
 
         if (intent.action == "com.protctus.app.ACTION_SHOW_BLOCK_SCREEN") {
             vpnBlockedUrl.value = intent.getStringExtra("domain")
+        }
+        
+        if (intent.action == "com.protctus.app.ACTION_SHOW_USB_BLOCK_SCREEN") {
+            vpnBlockedUsb.value = true
         }
         
         if (intent.getBooleanExtra("NAVIGATE_TO_THREAT_FEED", false)) {
@@ -408,6 +428,48 @@ class MainActivity : AppCompatActivity(), com.razorpay.PaymentResultWithDataList
                     packageName = route.packageName,
                     appName = route.title,
                     reason = route.description
+                )
+            }
+            
+            // ── Education Redesign ──
+            composable<Route.EducationHome> { com.protctus.app.ui.screens.education.EducationHomeScreen(navController = navController) }
+            composable<Route.LearningPaths> { com.protctus.app.ui.screens.education.LearningPathsScreen(navController = navController) }
+            composable<Route.DailyGoal> { com.protctus.app.ui.screens.education.DailyGoalsScreen(navController = navController) }
+            composable<Route.Streak> { com.protctus.app.ui.screens.education.StreakScreen(navController = navController) }
+            composable<Route.Achievements> { com.protctus.app.ui.screens.education.AchievementsScreen(navController = navController) }
+            composable<Route.Completion> { com.protctus.app.ui.screens.education.CompletionScreen(navController = navController) }
+            composable<Route.Profile> { com.protctus.app.ui.screens.education.EducationProfileScreen(navController = navController) }
+            composable<Route.EducationContent> { backStackEntry ->
+                val route = backStackEntry.toRoute<Route.EducationContent>()
+                val viewModel: com.protctus.app.viewmodel.SecurityQuizViewModel = hiltViewModel()
+                val feedState by viewModel.feedState.collectAsState()
+                
+                var title = "Lesson"
+                var category = "Info"
+                var description = ""
+                var progress = 0.5f
+
+                if (feedState is com.protctus.app.viewmodel.FeedUiState.Success) {
+                    val feed = (feedState as com.protctus.app.viewmodel.FeedUiState.Success).data
+                    val card = feed.find { it.card.id == route.cardId }?.card
+                    if (card != null) {
+                        title = card.title
+                        category = card.category
+                        description = card.description
+                        progress = feed.indexOfFirst { it.card.id == route.cardId }.toFloat() / feed.size
+                    }
+                }
+
+                com.protctus.app.ui.screens.education.EducationContentScreen(
+                    navController = navController,
+                    title = title,
+                    category = category,
+                    description = description,
+                    progress = progress,
+                    onContinue = { 
+                        viewModel.submitAnswer(route.cardId, true)
+                        navController.popBackStack() 
+                    }
                 )
             }
         }

@@ -1,0 +1,74 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/ns-engine",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+
+[workspace.dependencies]
+# ── Parsing ──
+# Zero-copy parser combinators for DNS, TLS, and IP packet parsing.
+nom = "7.1"
+
+# ── System ──
+# POSIX syscalls: epoll, read/write, socket, ioctl (TUN device I/O).
+libc = "0.2"
+
+# ── Logging ──
+# Logging facade — backend is selected at compile time per target.
+log = "0.4"
+# Android logcat backend (only linked on android targets).
+android_logger = "0.14"
+
+# ── Data Structures ──
+# Bounded LRU cache with per-entry TTL for L0 decision cache.
+lru = "0.12"
+# Aho-Corasick multi-pattern automaton for L1 typosquat detection.
+aho-corasick = "1.1"
+
+# ── Unicode / Text ──
+# NFC/NFKD normalization for homograph / IDN confusable detection.
+unicode-normalization = "0.1"
+
+# ── FFI ──
+# JNI bindings for Kotlin ↔ Rust interop on Android.
+jni = "0.21"
+
+# ── Crypto ──
+# SHA-256 for certificate fingerprinting.
+sha2 = "0.10"
+# MD5 for JA3 fingerprint computation (industry standard hash for JA3).
+md-5 = "0.10"
+
+# ── Error Handling ──
+# Derived error types for PhishingError across FFI and internal boundaries.
+thiserror = "1.0"
+
+# ── Hex ──
+# Hex encoding for JA3 fingerprint.
+hex = "0.4"
+
+# ── Testing ──
+# Property-based testing for parser fuzz-resistance verification.
+proptest = "1.4"
+
+# ══════════════════════════════════════════════════════════════
+#  Release Profile — Optimized for Android APK Size
+# ══════════════════════════════════════════════════════════════
+
+[profile.release]
+# Link-Time Optimization: whole-program analysis for dead code elimination.
+lto = true
+# Optimize for binary size (critical for mobile APK budget).
+opt-level = "z"
+# Single codegen unit: maximizes LTO effectiveness at cost of compile time.
+codegen-units = 1
+# Strip all symbols from the .so (saves ~30-50% binary size).
+strip = "symbols"
+# Abort on panic instead of unwinding — smaller binary, no unwind tables.
+# All FFI boundaries use catch_unwind before this takes effect.
+panic = "abort"
