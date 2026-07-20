@@ -62,7 +62,8 @@ class RealTimeFileObserver(
     }
 
     private val scanChannel = Channel<ScanRequest>(MAX_QUEUE_CAPACITY)
-    private val inFlightPaths = ConcurrentHashMap.newKeySet<String>()
+    private val inFlightRequests = ConcurrentHashMap<String, ScanRequest>()
+    private val pendingRescans = ConcurrentHashMap<String, ScanRequest>()
 
     // ─── Content Observers ───────────────────────────────────────────
     private val mediaStoreObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -78,6 +79,9 @@ class RealTimeFileObserver(
             scope.launch { handleMediaStoreChange(uri) }
         }
     }
+
+    // Native FileObserver for instant detection in Downloads (catches Chrome/browser downloads bypassing MediaStore)
+    private var nativeDownloadObserver: android.os.FileObserver? = null
 
     // ─── Database ────────────────────────────────────────────────────
     private val db = AppDatabase.getInstance(context)
@@ -117,7 +121,10 @@ class RealTimeFileObserver(
                     } catch (e: Exception) {
                         Log.e(TAG, "Scan failed for ${req.filePath}: ${e.message}")
                     } finally {
-                        inFlightPaths.remove(req.filePath)
+                        inFlightRequests.remove(req.filePath)
+                        pendingRescans.remove(req.filePath)?.let { pending ->
+                            enqueueRequest(pending)
+                        }
                     }
                 }
             }
@@ -236,24 +243,39 @@ class RealTimeFileObserver(
      * Enqueues a file into the priority scan queue with duplicate suppression.
      */
     private fun enqueueFile(filePath: String, size: Long, lastModified: Long, mimeType: String) {
-        // Duplicate suppression: skip if already in-flight
-        if (!inFlightPaths.add(filePath)) {
-            metricsDuplicatesSuppressed.incrementAndGet()
-            return
-        }
-
         val ext = filePath.substringAfterLast('.', "").lowercase()
         val category = FileFeatureExtractor.categorizeFile(ext)
         val priority = FileFeatureExtractor.priorityOf(category)
 
         val request = ScanRequest(filePath, size, lastModified, mimeType, category, priority)
+        enqueueRequest(request)
+    }
+
+    private fun enqueueRequest(request: ScanRequest) {
+        // Duplicate suppression: identical in-flight events are skipped; changed metadata is rescanned later.
+        val current = inFlightRequests.putIfAbsent(request.filePath, request)
+        if (current != null) {
+            if (current.hasDifferentMetadataThan(request)) {
+                pendingRescans.compute(request.filePath) { _, existing ->
+                    if (existing == null || existing.hasDifferentMetadataThan(request)) request else existing
+                }
+            }
+            metricsDuplicatesSuppressed.incrementAndGet()
+            return
+        }
 
         // Non-blocking offer to channel; drop if queue is full (backpressure)
         val accepted = scanChannel.trySend(request).isSuccess
         if (!accepted) {
-            inFlightPaths.remove(filePath)
-            Log.w(TAG, "Scan queue full, dropping: $filePath")
+            inFlightRequests.remove(request.filePath)
+            Log.w(TAG, "Scan queue full, dropping: ${request.filePath}")
         }
+    }
+
+    private fun ScanRequest.hasDifferentMetadataThan(other: ScanRequest): Boolean {
+        return fileSize != other.fileSize ||
+                lastModified != other.lastModified ||
+                mimeType != other.mimeType
     }
 
     // ─── Scan processing ─────────────────────────────────────────────
@@ -442,6 +464,32 @@ class RealTimeFileObserver(
                 true,
                 mediaStoreObserver
             )
+
+            // Native FileObserver for Downloads directory
+            val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+            if (downloadsDir.exists()) {
+                nativeDownloadObserver = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    object : android.os.FileObserver(downloadsDir, android.os.FileObserver.CLOSE_WRITE or android.os.FileObserver.MOVED_TO) {
+                        override fun onEvent(event: Int, path: String?) {
+                            if (path != null) {
+                                val fullPath = File(downloadsDir, path).absolutePath
+                                enqueueDirectScan(fullPath)
+                            }
+                        }
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    object : android.os.FileObserver(downloadsDir.absolutePath, android.os.FileObserver.CLOSE_WRITE or android.os.FileObserver.MOVED_TO) {
+                        override fun onEvent(event: Int, path: String?) {
+                            if (path != null) {
+                                val fullPath = File(downloadsDir, path).absolutePath
+                                enqueueDirectScan(fullPath)
+                            }
+                        }
+                    }
+                }
+                nativeDownloadObserver?.startWatching()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to register observers: ${e.message}")
         }
@@ -453,6 +501,7 @@ class RealTimeFileObserver(
             context.contentResolver.unregisterContentObserver(downloadsObserver)
         } catch (e: Exception) {}
 
+        nativeDownloadObserver?.stopWatching()
         scanChannel.close()
     }
 

@@ -17,5 +17,7 @@ data class EvidenceNode(
     val type: PropertyType,
     val reliability: TrustLevel,
     val confidence: Float,
-    val sourceQuality: String
+    val sourceQuality: String,
+    val probabilityFloor: Float? = null,
+    val probabilityCap: Float? = null
 )

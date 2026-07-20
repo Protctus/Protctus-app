@@ -14,11 +14,11 @@ object EvidenceNormalizer {
         val nodes = mutableListOf<EvidenceNode>()
 
         if (evidence.yaraMatches.isNotEmpty()) {
-            nodes.add(EvidenceNode("YARA_SIGNATURE_MATCH", PropertyType.SIGNATURE, TrustLevel.HIGH, 0.9f, "YARA"))
+            nodes.add(EvidenceNode("YARA_SIGNATURE_MATCH", PropertyType.SIGNATURE, TrustLevel.HIGH, 0.9f, "YARA", probabilityFloor = if (evidence.clamAvMatches.isNotEmpty()) 1.0f else 0.8f))
         }
 
         if (evidence.clamAvMatches.isNotEmpty()) {
-            nodes.add(EvidenceNode("CLAMAV_SIGNATURE_MATCH", PropertyType.SIGNATURE, TrustLevel.HIGH, 0.95f, "ClamAV"))
+            nodes.add(EvidenceNode("CLAMAV_SIGNATURE_MATCH", PropertyType.SIGNATURE, TrustLevel.HIGH, 0.95f, "ClamAV", probabilityFloor = 1.0f))
         }
 
         if (evidence.entropy != null && evidence.entropy >= 7.99) {
@@ -66,14 +66,33 @@ object EvidenceNormalizer {
             nodes.add(EvidenceNode("SIDELOADED_APP", PropertyType.CONTEXTUAL, TrustLevel.LOW, 1.0f, "PackageManager"))
         }
 
+        val correlatedProbability = evidence.correlationVerdict.finalProbability
+        val isDefinitiveMalware = evidence.correlationVerdict.finalVerdict == com.protctus.app.engine.correlation.ThreatVerdict.HIGH_CONFIDENCE_MALWARE
+
+        val globalFloor = if (isDefinitiveMalware) 1.0f else null
+        
+        val hasSignatureMatch = evidence.correlationVerdict.signals.any { it.cluster == EvidenceCluster.THREAT_SIGNATURE }
+        
+        // Preserve intentional caps for automation/safe apps to prevent V2 reasoning engine inflation
+        val globalCap = if (evidence.correlationVerdict.finalVerdict == com.protctus.app.engine.correlation.ThreatVerdict.CLEAN && !hasSignatureMatch) {
+            0.0f
+        } else if (correlatedProbability < 0.65f && !hasSignatureMatch) {
+            correlatedProbability
+        } else {
+            null
+        }
+
         evidence.correlationVerdict.signals.forEach { signal ->
+            val floor = if (signal.certainty == com.protctus.app.engine.correlation.CertaintyLevel.DEFINITIVE) 1.0f else globalFloor
+            val cap = if (signal.cluster == EvidenceCluster.THREAT_SIGNATURE) null else globalCap
+
             when (signal.cluster) {
-                EvidenceCluster.UI_ABUSE -> nodes.add(EvidenceNode("UI_ABUSE", PropertyType.BEHAVIORAL, TrustLevel.LOW, signal.confidence, signal.engine))
-                EvidenceCluster.DYNAMIC_STEALTH -> nodes.add(EvidenceNode("DYNAMIC_STEALTH", PropertyType.BEHAVIORAL, TrustLevel.LOW, signal.confidence, signal.engine))
-                EvidenceCluster.THREAT_SIGNATURE -> nodes.add(EvidenceNode("SIGNATURE_MATCH", PropertyType.SIGNATURE, TrustLevel.HIGH, signal.confidence, signal.engine))
-                EvidenceCluster.STRUCTURAL_ANOMALY -> nodes.add(EvidenceNode("STRUCTURAL_ANOMALY", PropertyType.STRUCTURAL, TrustLevel.MEDIUM, signal.confidence, signal.engine))
-                EvidenceCluster.PRIVILEGE_ESCALATION -> nodes.add(EvidenceNode("PRIVILEGE_ESCALATION", PropertyType.BEHAVIORAL, TrustLevel.LOW, signal.confidence, signal.engine))
-                EvidenceCluster.DATA_EXFILTRATION -> nodes.add(EvidenceNode("DATA_EXFILTRATION", PropertyType.BEHAVIORAL, TrustLevel.LOW, signal.confidence, signal.engine))
+                EvidenceCluster.UI_ABUSE -> nodes.add(EvidenceNode("UI_ABUSE", PropertyType.BEHAVIORAL, TrustLevel.LOW, signal.confidence, signal.engine, floor, cap))
+                EvidenceCluster.DYNAMIC_STEALTH -> nodes.add(EvidenceNode("DYNAMIC_STEALTH", PropertyType.BEHAVIORAL, TrustLevel.LOW, signal.confidence, signal.engine, floor, cap))
+                EvidenceCluster.THREAT_SIGNATURE -> nodes.add(EvidenceNode("SIGNATURE_MATCH", PropertyType.SIGNATURE, TrustLevel.HIGH, signal.confidence, signal.engine, floor, null))
+                EvidenceCluster.STRUCTURAL_ANOMALY -> nodes.add(EvidenceNode("STRUCTURAL_ANOMALY", PropertyType.STRUCTURAL, TrustLevel.MEDIUM, signal.confidence, signal.engine, floor, cap))
+                EvidenceCluster.PRIVILEGE_ESCALATION -> nodes.add(EvidenceNode("PRIVILEGE_ESCALATION", PropertyType.BEHAVIORAL, TrustLevel.LOW, signal.confidence, signal.engine, floor, cap))
+                EvidenceCluster.DATA_EXFILTRATION -> nodes.add(EvidenceNode("DATA_EXFILTRATION", PropertyType.BEHAVIORAL, TrustLevel.LOW, signal.confidence, signal.engine, floor, cap))
                 else -> {}
             }
         }

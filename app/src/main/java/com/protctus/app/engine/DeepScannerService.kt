@@ -27,6 +27,8 @@ import com.protctus.app.engine.correlation.AdaptiveScanConfig
 import com.protctus.app.engine.correlation.ThreatCorrelationEngine
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.io.File
 import java.io.FileInputStream
 import java.security.MessageDigest
@@ -153,7 +155,7 @@ class DeepScannerService : LifecycleService() {
             // ==========================================
             // PHASE 2: Complete Device File Traversal
             // ==========================================
-            runFullFileSystemScan(totalItems)
+            runFullFileSystemScan(totalItems, scanConfig)
 
             // ==========================================
             // PHASE 3: Completion
@@ -184,7 +186,8 @@ class DeepScannerService : LifecycleService() {
                 "com.oppo.market", "com.vivo.appstore", "com.coloros.appmanager"
             )
 
-            installedPackages.chunked(5).forEach { chunk ->
+            val batchSize = config.scanBatchSize.coerceAtLeast(1)
+            installedPackages.chunked(batchSize).forEach { chunk ->
                 if (isCancelled) return
                 checkPauseStatus()
 
@@ -201,10 +204,21 @@ class DeepScannerService : LifecycleService() {
 
                     try {
                         val correlationEngine = ThreatCorrelationEngine.getInstance(this@DeepScannerService)
-                        val correlationVerdict = correlationEngine.correlateDeepScan(pm, pkg, config)
 
                         val isSystemApp = (pkg.applicationInfo?.flags?.and(ApplicationInfo.FLAG_SYSTEM) ?: 0) != 0 || 
                                           (pkg.applicationInfo?.flags?.and(ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) ?: 0) != 0
+
+                        // System apps must use Smart Scan (lightweight) to avoid engine noise
+                        // causing false positives. Deep Scan engines (Quark deep, ClamAV full,
+                        // YARA, Androguard deep) produce signals even for benign system apps
+                        // due to elevated permissions and native code, which bypasses SafeScreener's
+                        // system app fast-path and triggers the reasoning pipeline incorrectly.
+                        val correlationVerdict = if (isSystemApp) {
+                            correlationEngine.correlateSmartScan(pm, pkg)
+                        } else {
+                            correlationEngine.correlateDeepScan(pm, pkg, config)
+                        }
+
                         val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                             try { pm.getInstallSourceInfo(pkg.packageName).installingPackageName } catch (_: Exception) { null }
                         } else {
@@ -236,14 +250,14 @@ class DeepScannerService : LifecycleService() {
                     scannedCount++
                 }
                 if (scannedCount % 10 == 0) {
-                    kotlinx.coroutines.delay(10)
+                    kotlinx.coroutines.delay(config.scanDelayMs.toLong())
                 }
                 yield()
             }
         } catch (_: Exception) {}
     }
 
-    private suspend fun runFullFileSystemScan(totalItems: Int) {
+    private suspend fun runFullFileSystemScan(totalItems: Int, config: AdaptiveScanConfig) {
         val storageManager = getSystemService(Context.STORAGE_SERVICE) as StorageManager
         val volumes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             storageManager.storageVolumes.mapNotNull { it.directory }
@@ -253,30 +267,34 @@ class DeepScannerService : LifecycleService() {
 
         for (volume in volumes) {
             if (isCancelled) break
-            crawlAndScanAll(volume, totalItems)
+            crawlAndScanAll(volume, totalItems, config)
         }
     }
 
-    private suspend fun crawlAndScanAll(root: File, total: Int) {
-        val queue = ArrayDeque<File>()
-        queue.add(root)
-        val batchSize = 50 
+    private suspend fun crawlAndScanAll(root: File, total: Int, config: AdaptiveScanConfig) {
+        val queue = ArrayDeque<Pair<File, Int>>()
+        queue.add(root to 0)
+        val batchSize = config.scanBatchSize.coerceAtLeast(1)
+        val maxDepth = config.maxFileSystemDepth.coerceAtLeast(0)
+        val maxDurationMs = config.maxScanDurationMinutes.coerceAtLeast(1) * 60L * 1000L
+        val scanParallelism = config.maxConcurrentScans.coerceAtLeast(1)
+        val scanSemaphore = Semaphore(scanParallelism)
 
         while (queue.isNotEmpty() && !isCancelled) {
-            if (System.currentTimeMillis() - scanStartTime > 60 * 60 * 1000L) {
+            if (System.currentTimeMillis() - scanStartTime > maxDurationMs) {
                 isCancelled = true
                 break
             }
             checkPauseStatus()
-            val currentDir = queue.removeFirst()
+            val (currentDir, depth) = queue.removeFirst()
             val entries = try { currentDir.listFiles() } catch (_: Exception) { null } ?: continue
 
             val filesToScan = mutableListOf<File>()
             for (entry in entries) {
                 if (entry.isDirectory) {
                     val dirName = entry.name
-                    if (dirName != "." && dirName != ".." && !dirName.equals("Android", ignoreCase = true)) {
-                        queue.add(entry)
+                    if (depth < maxDepth && dirName != "." && dirName != ".." && !dirName.equals("Android", ignoreCase = true)) {
+                        queue.add(entry to depth + 1)
                     }
                 } else if (entry.isFile && entry.canRead() && entry.length() > 0) {
                     filesToScan.add(entry)
@@ -289,12 +307,14 @@ class DeepScannerService : LifecycleService() {
                     coroutineScope {
                         batch.map { file ->
                             async {
-                                scanSingleFile(file, total)
+                                scanSemaphore.withPermit {
+                                    scanSingleFile(file, total)
+                                }
                             }
                         }.awaitAll()
                     }
                     scannedCount += batch.size
-                    kotlinx.coroutines.delay(50) 
+                    kotlinx.coroutines.delay(config.scanDelayMs.toLong())
                 }
             }
         }

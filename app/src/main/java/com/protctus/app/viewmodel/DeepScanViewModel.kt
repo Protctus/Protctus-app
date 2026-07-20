@@ -69,6 +69,17 @@ class DeepScanViewModel @Inject constructor(
     private val isScanPaused = MutableStateFlow(false)
     private var isScanCancelled = false
 
+    init {
+        // Auto-reconnect to background service state if it's already running
+        viewModelScope.launch {
+            com.protctus.app.engine.DeepScannerService.globalScanState.collect { state ->
+                if (state !is DeepScanState.Idle) {
+                    _scanState.value = state
+                }
+            }
+        }
+    }
+
     /**
      * The OS Profiler Pre-Scan phase natively extracting Telemetry
      * to deterministically predict the load parameters to the Edge evaluator.
@@ -201,16 +212,6 @@ class DeepScanViewModel @Inject constructor(
 
         // Delegate Execution completely to the Backend Foreground Service
         com.protctus.app.engine.DeepScannerService.startScan(appContext, currentState.profile)
-        
-        // Listen passively to the backend Service emission loop
-        viewModelScope.launch {
-            com.protctus.app.engine.DeepScannerService.globalScanState.collect { state ->
-                // Ensure UI catches the state updates smoothly
-                if (state !is DeepScanState.Idle) {
-                    _scanState.value = state
-                }
-            }
-        }
     }
 
     fun togglePause() {

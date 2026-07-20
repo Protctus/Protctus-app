@@ -378,18 +378,20 @@ object FileFeatureExtractor {
                         break
                     }
 
+                    val entryName = entry.name.replace('\\', '/')
+                    if (entryName.startsWith("/") ||
+                        entryName.startsWith("\\") ||
+                        entryName.length >= 3 && entryName[1] == ':' && entryName[2] == '/' ||
+                        entryName.split('/').any { it == ".." }) {
+                        hasTraversal = true
+                    }
+
                     var bytesRead: Int
                     while (zis.read(buffer).also { bytesRead = it } != -1) {
                         uncompressedBytes += bytesRead
                         
                         val ratio = if (compressedBytes > 0) uncompressedBytes.toDouble() / compressedBytes else 0.0
-                        if ((ratio > 100.0 && uncompressedBytes > 100_000_000L) || uncompressedBytes > 250_000_000L) { 
-                            finalRatio = ratio
-                        }
-
-                        if (entry.name.contains("../") || entry.name.contains("..\\")) {
-                            hasTraversal = true
-                        }
+                        finalRatio = maxOf(finalRatio, ratio)
 
                         if (!hasExecutable && bytesRead >= 4) {
                             for (i in 0 until bytesRead - 3) {

@@ -24,8 +24,8 @@ object IntentEstimator {
             RiskScenario.UNAUTHORIZED_EXECUTION,
             RiskScenario.DEFENSE_EVASION,
             RiskScenario.PRIVILEGE_ABUSE,
-            RiskScenario.DATA_THEFT,
-            RiskScenario.UI_SPOOFING
+            RiskScenario.SENSITIVE_DATA_ACCESS,
+            RiskScenario.UNKNOWN_TECHNICAL_RISK
         )
 
         var maxMaliciousRiskProb = 0.0f
@@ -40,7 +40,18 @@ object IntentEstimator {
         }
 
         if (maxMaliciousRiskProb > 0f) {
-            if (hasSystemContext) {
+            val hasSignatureMatch = contextProperties.any { it.type == com.protctus.app.engine.reasoning.models.PropertyType.SIGNATURE }
+            val isFileScan = contextProperties.any { it.property in listOf("HIGH_ENTROPY", "RIGHT_TO_LEFT_OVERRIDE", "EMBEDDED_EXECUTABLE", "DOUBLE_EXTENSION", "EXECUTABLE_IN_DATA_DIR", "POLYGLOT_STRUCTURE", "ARCHIVE_TRAVERSAL_PATH", "HIGH_COMPRESSION_RATIO", "YARA_SIGNATURE_MATCH", "CLAMAV_SIGNATURE_MATCH") }
+
+            if (hasSignatureMatch) {
+                val intent = states[Intent.UNKNOWN_MALICIOUS_INTENT]!!
+                intent.probability = maxMaliciousRiskProb
+                intent.confidence = maxMaliciousRiskConf
+            } else if (isFileScan) {
+                val intent = states[Intent.UNKNOWN_MALICIOUS_INTENT]!!
+                intent.probability = maxMaliciousRiskProb * 0.7f
+                intent.confidence = maxMaliciousRiskConf * 0.8f
+            } else if (hasSystemContext) {
                 val intent = states[Intent.DEVELOPER_TOOL]!!
                 intent.probability = maxMaliciousRiskProb * 0.8f
                 intent.confidence = maxMaliciousRiskConf * 0.9f

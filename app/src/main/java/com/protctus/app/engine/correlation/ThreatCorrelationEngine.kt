@@ -171,7 +171,7 @@ class ThreatCorrelationEngine private constructor(private val context: Context) 
         if (!clamEngine.ready) return@withContext emptyList()
         val apkPath = pkg.applicationInfo?.publicSourceDir ?: return@withContext emptyList()
         try {
-            val results = clamEngine.fullScan(File(apkPath))
+            val results = clamEngine.fullScan(File(apkPath), config.maxPatternScanBytes)
             if (results.isNotEmpty()) {
                 results.forEach { expl.signatures.add("${it.malwareName} (${it.matchType})") }
                 val topMatch = results.maxByOrNull { it.confidence }!!

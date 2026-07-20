@@ -62,10 +62,11 @@
 -keepattributes RuntimeVisibleAnnotations
 -keepattributes RuntimeVisibleParameterAnnotations
 
-# ── 7. TENSORFLOW LITE (Protect ML Models) ──
-# Keep the TFLite runtime but aggressively obfuscate OUR wrapper code
--keep class org.tensorflow.lite.** { *; }
--dontwarn org.tensorflow.lite.**
+# ── 7. ONNX RUNTIME (NeuroShield ML Engine) ──
+-keep class ai.onnxruntime.** { *; }
+-dontwarn ai.onnxruntime.**
+# NeuroShield engine core classes
+-keep class com.protctus.app.neuroshield.engine.** { *; }
 # Protect PhishingDetector's native model loading interface
 -keepclassmembers class com.protctus.edge.phishing.PhishingDetector {
     <init>(...);

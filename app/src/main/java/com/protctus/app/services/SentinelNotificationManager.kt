@@ -98,7 +98,6 @@ class SentinelNotificationManager(private val context: Context) {
                 }
             }
 
-            EngineDecision.INCONCLUSIVE,
             EngineDecision.LOW_RISK,
             EngineDecision.CLEAN -> {
                 // Low/Clean: no notification, stored in cache history only
@@ -140,7 +139,7 @@ class SentinelNotificationManager(private val context: Context) {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("PACKAGE_NAME", "File: ${threat.fileName}")
             putExtra("APP_NAME", threat.verdict.decision.displayName)
-            putExtra("RISK_SCORE", threat.verdict.finalScore.toInt())
+            putExtra("RISK_SCORE", (threat.verdict.finalScore * 10).toInt().coerceAtMost(100))
             putStringArrayListExtra("ANOMALIES", arrayListOf(threat.verdict.explanation))
         }
 
@@ -181,7 +180,7 @@ class SentinelNotificationManager(private val context: Context) {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("PACKAGE_NAME", "File: ${mostSevere.fileName}")
             putExtra("APP_NAME", mostSevere.verdict.decision.displayName)
-            putExtra("RISK_SCORE", mostSevere.verdict.finalScore.toInt())
+            putExtra("RISK_SCORE", (mostSevere.verdict.finalScore * 10).toInt().coerceAtMost(100))
             putStringArrayListExtra("ANOMALIES", arrayListOf(mostSevere.verdict.explanation))
         }
 
@@ -218,7 +217,7 @@ class SentinelNotificationManager(private val context: Context) {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra("PACKAGE_NAME", "File: ${threat.fileName}")
                 putExtra("APP_NAME", threat.verdict.decision.displayName)
-                putExtra("RISK_SCORE", threat.verdict.finalScore.toInt())
+                putExtra("RISK_SCORE", (threat.verdict.finalScore * 10).toInt().coerceAtMost(100))
                 putStringArrayListExtra("ANOMALIES", arrayListOf(threat.verdict.explanation))
             }
             context.startActivity(intent)

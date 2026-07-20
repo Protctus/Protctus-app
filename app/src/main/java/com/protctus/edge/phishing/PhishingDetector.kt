@@ -2,50 +2,49 @@ package com.protctus.edge.phishing
 
 import android.content.Context
 import android.util.Log
-import org.tensorflow.lite.Interpreter
-import java.io.FileInputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
+import com.protctus.app.neuroshield.engine.LexicalFeatureExtractor
+import com.protctus.app.neuroshield.engine.NeuroShieldEngine
+import com.protctus.app.neuroshield.engine.ThreatVerdict
+import com.protctus.app.neuroshield.engine.TrustedDomainCache
+import com.protctus.app.neuroshield.engine.VerdictEngine
+import com.protctus.app.neuroshield.engine.VerdictLevel
 import kotlin.math.log2
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.URI
 
 /**
- * Protctus Dynamic Multi-Layer Phishing Detection Engine v2
+ * Protctus NeuroShield Multi-Layer Phishing Detection Engine v3
  *
- * Hybrid Architecture: 95% offline, server enrichment for high-suspicion domains.
+ * Hybrid Architecture: 100% offline, on-device inference via ONNX Runtime.
  *
  * Layer 0: User Whitelist            → ~0μs (HashSet)
- * Layer 1: Tranco Whitelist          → ~1μs (ConcurrentHashSet)
+ * Layer 1: Tranco Whitelist          → ~1μs (BloomFilter)
  * Layer 2: Raw IP Guard              → ~1μs (Regex)
  * Layer 3: Dynamic Threat Analysis   → ~0.3ms
  *   3a: BK-Tree Brand Proximity      (top 5000 domains, fuzzy match ≤2 edits)
  *   3b: Markov Chain DGA Detection   (bigram model trained on trusted domains)
  *   3c: Viterbi Word Segmentation    (probabilistic risk-word detection)
  *   3d: Structural Anomaly Scoring   (TLD risk, entropy, consonant-vowel ratio)
- * Layer 4: TFLite ML Model           → ~2ms (Dual-input inference)
- * Layer 5: Hybrid Server Enrichment  → async, non-blocking
+ * Layer 4: ONNX LightGBM Inference   → ~1-2ms (53-feature lexical model)
+ * Layer 5: Verdict Engine            → score fusion + classification
  *
  * HEURISTIC CAP: 0.80f — no heuristic engine alone exceeds this.
  * Total critical-path latency: ~2.5ms
  */
 class PhishingDetector(private val context: Context) {
 
-    private var interpreter: Interpreter? = null
-    // Bloom filter for memory-efficient whitelist (~1MB vs ~40MB HashSet)
-    private var trustedBloom: BloomFilter? = null
-    // Small set only for BK-Tree source + Markov training (top 5K domains)
-    private val bkSourceDomains: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    // ── NeuroShield ONNX Engine ──
+    private val neuroShieldEngine = NeuroShieldEngine(context)
+    private val verdictEngine = VerdictEngine()
+    private val verdictCache = TrustedDomainCache()
 
-    // ── Dynamic Engines ──
+    // ── Legacy Heuristic Engines (preserved) ──
+    private var trustedBloom: BloomFilter? = null
+    private val bkSourceDomains: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private val bkTree = BKTree()
     private val markovChain = MarkovChain()
     private val viterbiSegmenter = ViterbiSegmenter()
@@ -54,21 +53,17 @@ class PhishingDetector(private val context: Context) {
     var threatReporter: ThreatReporter? = null
 
     companion object {
-        private const val MODEL_PATH = "phishing_model.tflite"
-        private const val MAX_URL_LENGTH = 200
         private const val TAG = "PhishingDetector"
         private val IP_PATTERN = java.util.regex.Pattern.compile("^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$")
-        private const val CHARS = "abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:'\"/\\|_@#$%^&*~`+-=<>()[]{} "
 
         // ── THRESHOLDS ──
-        const val THRESHOLD_SAFE = 0.40f
-        const val THRESHOLD_PHISHING = 0.85f
-        const val THRESHOLD_NEUTRAL_PHISHING = 0.50f
+        const val THRESHOLD_SAFE = 0.30f
+        const val THRESHOLD_PHISHING = 0.65f
         const val HEURISTIC_CAP = 0.80f
-        const val REPORT_SUSPICIOUS = 0.50f
-        // DNS-only path thresholds (no ML, so more conservative)
-        const val DNS_BLOCK_THRESHOLD = 0.80f // Increased from 0.70f to require absolute heuristic consensus (zero false positives)
-        const val DNS_SUSPICIOUS_THRESHOLD = 0.65f // Increased from 0.40f to stop notification spam for CDNs/Ads
+
+        // DNS-only path thresholds
+        const val DNS_BLOCK_THRESHOLD = 0.65f
+        const val DNS_SUSPICIOUS_THRESHOLD = 0.30f
 
         private const val BK_TOP_N = 5000
         private const val BK_MAX_DIST = 2
@@ -116,15 +111,29 @@ class PhishingDetector(private val context: Context) {
     @Volatile private var trancoReady = false
     @Volatile private var enginesReady = false
     private var userWhitelist: Set<String> = emptySet()
-    // Full domain set used only during init for Markov training, then released
     private var markovTrainingSet: MutableSet<String>? = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     init {
-        initTFLite()
+        initNeuroShield()
         loadTrustedDomains()
         CoroutineScope(Dispatchers.IO).launch {
             UserWhitelistManager(context).whitelistedDomains.collect { domains ->
                 userWhitelist = domains
+            }
+        }
+    }
+
+    /**
+     * Initialize the ONNX-based NeuroShield engine.
+     * Replaces the legacy TFLite initialization.
+     */
+    private fun initNeuroShield() {
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                neuroShieldEngine.initialize()
+                Log.i(TAG, "NeuroShield ONNX engine initialized (mode=${neuroShieldEngine.mode})")
+            } catch (e: Exception) {
+                Log.e(TAG, "NeuroShield initialization failed — heuristics-only mode", e)
             }
         }
     }
@@ -177,31 +186,6 @@ class PhishingDetector(private val context: Context) {
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  TFLITE INIT
-    // ════════════════════════════════════════════════════════════════
-
-    private fun initTFLite() {
-        try {
-            val options = Interpreter.Options().apply {
-                numThreads = 1
-                setUseNNAPI(false)
-            }
-            val model = loadModelFile(MODEL_PATH)
-            interpreter = Interpreter(model, options)
-            Log.d(TAG, "TFLite model loaded.")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load TFLite model.", e)
-        }
-    }
-
-    private fun loadModelFile(modelPath: String): MappedByteBuffer {
-        val fileDescriptor = context.assets.openFd(modelPath)
-        val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
-        val fileChannel = inputStream.channel
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, fileDescriptor.startOffset, fileDescriptor.declaredLength)
-    }
-
-    // ════════════════════════════════════════════════════════════════
     //  DOMAIN HELPERS
     // ════════════════════════════════════════════════════════════════
 
@@ -223,12 +207,6 @@ class PhishingDetector(private val context: Context) {
         return if (parts.size >= 2) "${parts[parts.size - 2]}.${parts[parts.size - 1]}" else domain
     }
 
-    private fun extractSubdomain(domain: String, platform: String): String {
-        if (domain == platform) return ""
-        val suffix = ".$platform"
-        return if (domain.endsWith(suffix)) domain.removeSuffix(suffix) else ""
-    }
-
     // ════════════════════════════════════════════════════════════════
     //  NEUTRAL INFRASTRUCTURE CHECK
     // ════════════════════════════════════════════════════════════════
@@ -239,14 +217,6 @@ class PhishingDetector(private val context: Context) {
             if (d == p || d.endsWith(".$p")) return true
         }
         return false
-    }
-
-    private fun getMatchingPlatform(domain: String): String? {
-        val d = domain.lowercase()
-        for (p in NEUTRAL_HOSTING_PLATFORMS) {
-            if (d == p || d.endsWith(".$p")) return p
-        }
-        return null
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -267,8 +237,6 @@ class PhishingDetector(private val context: Context) {
 
     // ════════════════════════════════════════════════════════════════
     //  LAYER 3: DYNAMIC THREAT ANALYSIS (~0.3ms total)
-    //  Combines: BK-Tree + Markov + Viterbi + Structural
-    //  ALL engines are dynamic — zero hardcoded brand/keyword lists
     // ════════════════════════════════════════════════════════════════
 
     /**
@@ -286,7 +254,6 @@ class PhishingDetector(private val context: Context) {
         var bkScore = 0f
         if (bkResults.isNotEmpty()) {
             val best = bkResults.minByOrNull { it.distance }!!
-            // Only flag if the incoming domain is NOT itself in the trusted list
             val incomingRoot = extractRootDomain(domain)
             val bloom = trustedBloom
             val notTrusted = bloom == null || (!bloom.mightContain(incomingRoot) && !bloom.mightContain(domain))
@@ -319,9 +286,8 @@ class PhishingDetector(private val context: Context) {
         if (viterbiScore > 0f) {
             breakdown.append("VITERBI=${String.format("%.2f", viterbiScore)} ")
         }
-        // BK-Tree + Viterbi synergy: brand proximity + risk words = very suspicious
         if (bkScore > 0f && viterbiScore > 0f) {
-            score += viterbiScore * 1.5f  // amplify when both fire
+            score += viterbiScore * 1.5f
             breakdown.append("SYNERGY ")
         } else {
             score += viterbiScore
@@ -330,32 +296,27 @@ class PhishingDetector(private val context: Context) {
         // ── 3d: Structural Anomaly Scoring (0 to 0.25) ──
         var structScore = 0f
 
-        // TLD risk
         val tld = domain.substringAfterLast('.')
         val tldRisk = TLD_RISK[tld] ?: 0f
         structScore += tldRisk
 
-        // Punycode / IDN homograph
         if (domain.contains("xn--")) {
             structScore += 0.15f
             breakdown.append("PUNYCODE ")
         }
 
-        // Shannon entropy (DGA-like randomness)
         val entropy = calculateShannonEntropy(domain.substringBefore('/'))
         if (entropy > 4.2) {
             structScore += 0.10f
             breakdown.append("ENTROPY=${String.format("%.1f", entropy)} ")
         }
 
-        // Excessive subdomain depth
         val dotCount = domain.count { it == '.' }
         if (dotCount >= 4) {
             structScore += 0.10f
             breakdown.append("DEPTH=$dotCount ")
         }
 
-        // Consonant-vowel ratio anomaly
         val cvRatio = consonantVowelRatio(domainLabel)
         if (cvRatio > 4.0f || cvRatio < 0.3f) {
             structScore += 0.10f
@@ -365,9 +326,8 @@ class PhishingDetector(private val context: Context) {
         if (tldRisk > 0f) breakdown.append("TLD=.$tld ")
         score += structScore.coerceAtMost(0.25f)
 
-        // ── Neutral infrastructure multiplier ──
         if (isNeutral && score > 0.1f) {
-            score *= 1.3f  // hosting platforms are inherently riskier
+            score *= 1.3f
             breakdown.append("NEUTRAL_BOOST ")
         }
 
@@ -403,11 +363,12 @@ class PhishingDetector(private val context: Context) {
     // ════════════════════════════════════════════════════════════════
 
     /**
-     * DNS-ONLY fast path for VPN service.
-     * Skips TFLite (useless without full URL features) and uses heuristic
-     * score directly. Non-blocking — fails open if engines not ready.
+     * DNS-path analysis with full ONNX + heuristic pipeline.
      *
-     * Thresholds are more conservative (higher) to compensate for no ML.
+     * Called synchronously from the C++ VPN DNS loop via JNI.
+     * Total latency budget: < 3ms.
+     *
+     * Returns the fused score for the VPN service to decide block/allow/alert.
      */
     fun analyzeDomainRiskDnsOnly(domainName: String): Float {
         val domain = getSafeHost(domainName)
@@ -415,6 +376,10 @@ class PhishingDetector(private val context: Context) {
 
         // L0: User Whitelist
         if (userWhitelist.contains(domain)) return 0.0f
+
+        // Cache hit — return immediately
+        val cached = verdictCache.get(domain)
+        if (cached != null) return cached.confidence
 
         // L1: BloomFilter whitelist (non-blocking, fail-open)
         if (!trancoReady) {
@@ -427,10 +392,7 @@ class PhishingDetector(private val context: Context) {
             if (bloom != null) {
                 var current = domain
                 while (current.contains('.')) {
-                    if (bloom.mightContain(current)) {
-                        Log.d(TAG, "L1 BLOOM → $domain (matched $current)")
-                        return 0.0f
-                    }
+                    if (bloom.mightContain(current)) return 0.0f
                     val dotIndex = current.indexOf('.')
                     if (dotIndex >= current.length - 1) break
                     current = current.substring(dotIndex + 1)
@@ -440,29 +402,42 @@ class PhishingDetector(private val context: Context) {
 
         // L2: Raw IP
         if (IP_PATTERN.matcher(domain).matches()) {
-            Log.d(TAG, "L2 RAW IP → $domain")
             return HEURISTIC_CAP
         }
 
         // L3: Dynamic Threat Analysis (non-blocking)
-        if (!enginesReady) {
-            Log.d(TAG, "DNS FAIL-OPEN (engines loading) → $domain")
-            return 0.0f
-        }
+        if (!enginesReady) return 0.0f
         val (heuristicScore, engineBreakdown) = dynamicThreatScore(domain, isNeutral)
 
-        // DNS path: heuristic IS the final score (no ML dilution)
-        val finalScore = heuristicScore
+        // L4: ONNX Inference
+        val onnxScore = if (neuroShieldEngine.isReady) {
+            neuroShieldEngine.infer(domain)
+        } else {
+            0.0f
+        }
+
+        // L5: Verdict Engine — score fusion
+        val verdict = verdictEngine.evaluate(
+            domain = domain,
+            onnxScore = onnxScore,
+            heuristicScore = heuristicScore,
+            onnxAvailable = neuroShieldEngine.isReady
+        )
+
+        // Cache the result
+        verdictCache.put(domain, verdict)
+
+        val finalScore = verdict.confidence
 
         if (finalScore >= DNS_BLOCK_THRESHOLD) {
-            Log.d(TAG, "DNS BLOCKED → $domain (score=${"%.3f".format(finalScore)}, engines=$engineBreakdown)")
+            Log.d(TAG, "DNS BLOCKED → $domain (score=${"%.3f".format(finalScore)}, ml=${"%.3f".format(onnxScore)}, heur=${"%.3f".format(heuristicScore)}, engines=$engineBreakdown)")
             CoroutineScope(Dispatchers.IO).launch {
-                threatReporter?.reportBlocked(domain, finalScore, "dns_only $engineBreakdown")
+                threatReporter?.reportBlocked(domain, finalScore, "neuroshield ml=${"%.3f".format(onnxScore)} heur=${"%.3f".format(heuristicScore)} $engineBreakdown")
             }
         } else if (finalScore >= DNS_SUSPICIOUS_THRESHOLD) {
             Log.d(TAG, "DNS SUSPICIOUS → $domain (score=${"%.3f".format(finalScore)})")
             CoroutineScope(Dispatchers.IO).launch {
-                threatReporter?.reportSuspicious(domain, finalScore, "dns_only $engineBreakdown")
+                threatReporter?.reportSuspicious(domain, finalScore, "neuroshield ml=${"%.3f".format(onnxScore)} heur=${"%.3f".format(heuristicScore)} $engineBreakdown")
             }
         }
 
@@ -478,12 +453,13 @@ class PhishingDetector(private val context: Context) {
         if (domain.isEmpty()) return 0.0f
 
         // L0: User Whitelist
-        if (userWhitelist.contains(domain)) {
-            Log.d(TAG, "L0 USER WHITELISTED → $domain")
-            return 0.0f
-        }
+        if (userWhitelist.contains(domain)) return 0.0f
 
-        // L1: BloomFilter whitelist (non-blocking)
+        // Cache hit
+        val cached = verdictCache.get(domain)
+        if (cached != null) return cached.confidence
+
+        // L1: BloomFilter whitelist
         if (!trancoReady) return 0.0f
         val isNeutral = isNeutralInfrastructure(domain)
         if (!isNeutral) {
@@ -491,10 +467,7 @@ class PhishingDetector(private val context: Context) {
             if (bloom != null) {
                 var current = domain
                 while (current.contains('.')) {
-                    if (bloom.mightContain(current)) {
-                        Log.d(TAG, "L1 BLOOM → $domain (matched $current)")
-                        return 0.0f
-                    }
+                    if (bloom.mightContain(current)) return 0.0f
                     val dotIndex = current.indexOf('.')
                     if (dotIndex >= current.length - 1) break
                     current = current.substring(dotIndex + 1)
@@ -503,134 +476,87 @@ class PhishingDetector(private val context: Context) {
         }
 
         // L2: Raw IP
-        if (IP_PATTERN.matcher(domain).matches()) {
-            Log.d(TAG, "L2 RAW IP → $domain")
-            return HEURISTIC_CAP
-        }
+        if (IP_PATTERN.matcher(domain).matches()) return HEURISTIC_CAP
 
-        // L3: Dynamic Threat Analysis (non-blocking)
+        // L3: Dynamic Threat Analysis
         if (!enginesReady) return 0.0f
         val (heuristicScore, engineBreakdown) = dynamicThreatScore(domain, isNeutral)
 
-        // L4: TFLite ML Model
-        val url = if (domainName.startsWith("http://") || domainName.startsWith("https://"))
-            domainName else "https://$domainName"
-        val mlScore = applyTFLite(url)
-
-        // COMBINE: If ML failed (0.0), trust heuristics alone at 90%
-        val combinedScore = if (mlScore <= 0.01f) {
-            (heuristicScore * 0.9f).coerceIn(0f, 1f)
+        // L4: ONNX Inference
+        val onnxScore = if (neuroShieldEngine.isReady) {
+            neuroShieldEngine.infer(domain)
         } else {
-            (mlScore * 0.6f + heuristicScore * 0.4f).coerceIn(0f, 1f)
+            0.0f
         }
 
-        // Reporting
+        // L5: Verdict Engine
+        val verdict = verdictEngine.evaluate(
+            domain = domain,
+            onnxScore = onnxScore,
+            heuristicScore = heuristicScore,
+            onnxAvailable = neuroShieldEngine.isReady
+        )
+
+        verdictCache.put(domain, verdict)
+
+        val combinedScore = verdict.confidence
+
         if (combinedScore >= HEURISTIC_CAP) {
-            Log.d(TAG, "BLOCKED → $domain (combined=${"%.3f".format(combinedScore)}, ml=${"%.3f".format(mlScore)}, heur=${"%.3f".format(heuristicScore)}, engines=$engineBreakdown)")
+            Log.d(TAG, "BLOCKED → $domain (combined=${"%.3f".format(combinedScore)}, ml=${"%.3f".format(onnxScore)}, heur=${"%.3f".format(heuristicScore)}, engines=$engineBreakdown)")
             CoroutineScope(Dispatchers.IO).launch {
-                threatReporter?.reportBlocked(domain, combinedScore, "ml=${"%.3f".format(mlScore)} heur=${"%.3f".format(heuristicScore)} $engineBreakdown")
+                threatReporter?.reportBlocked(domain, combinedScore, "neuroshield ml=${"%.3f".format(onnxScore)} heur=${"%.3f".format(heuristicScore)} $engineBreakdown")
             }
-        } else if (combinedScore >= REPORT_SUSPICIOUS) {
-            Log.d(TAG, "SUSPICIOUS → $domain (combined=${"%.3f".format(combinedScore)}, ml=${"%.3f".format(mlScore)}, heur=${"%.3f".format(heuristicScore)})")
+        } else if (combinedScore >= THRESHOLD_SAFE) {
+            Log.d(TAG, "SUSPICIOUS → $domain (combined=${"%.3f".format(combinedScore)}, ml=${"%.3f".format(onnxScore)}, heur=${"%.3f".format(heuristicScore)})")
             CoroutineScope(Dispatchers.IO).launch {
-                threatReporter?.reportSuspicious(domain, combinedScore, "ml=${"%.3f".format(mlScore)} heur=${"%.3f".format(heuristicScore)} $engineBreakdown")
+                threatReporter?.reportSuspicious(domain, combinedScore, "neuroshield ml=${"%.3f".format(onnxScore)} heur=${"%.3f".format(heuristicScore)} $engineBreakdown")
             }
         }
 
         return combinedScore
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  TFLITE INFERENCE
-    // ════════════════════════════════════════════════════════════════
-
-    private fun extractTabularFeatures(url: String): Array<FloatArray> {
-        val tabArray = FloatArray(13)
-        if (url.isEmpty()) return arrayOf(tabArray)
-
-        val clean = url.trim().lowercase()
-        val cleanNoProtocol = clean.replace(Regex("^https?://"), "")
-        val host = getSafeHost(url)
-
-        val isIp = if (host.isNotEmpty() && IP_PATTERN.matcher(host).matches()) 1.0f else 0.0f
-        val isHttps = if (clean.startsWith("https")) 1.0f else 0.0f
-        val isShortened = if (host.contains("bit.ly") || host.contains("t.co") || host.contains("tinyurl")) 1.0f else 0.0f
-
-        var letterCount = 0; var digitCount = 0
-        for (c in url) { if (c.isLetter()) letterCount++; if (c.isDigit()) digitCount++ }
-        val digitRatio = if (letterCount > 0) digitCount.toFloat() / letterCount.toFloat() else 0f
-        val specialCharsCount = url.count { it == '?' || it == '=' || it == '%' }
-
-        tabArray[0] = normalize(url.length.toFloat(), 0f, 200f)
-        tabArray[1] = normalize(host.length.toFloat(), 0f, 100f)
-        tabArray[2] = normalize(url.count { it == '.' }.toFloat(), 0f, 10f)
-        tabArray[3] = normalize(url.count { it == '-' }.toFloat(), 0f, 10f)
-        tabArray[4] = normalize(url.count { it == '@' }.toFloat(), 0f, 5f)
-        tabArray[5] = normalize((url.split("//").size - 1).toFloat(), 0f, 5f)
-        tabArray[6] = normalize(host.count { it == '.' }.toFloat(), 0f, 10f)
-        tabArray[7] = isIp
-        tabArray[8] = isHttps
-        tabArray[9] = normalize(specialCharsCount.toFloat(), 0f, 20f)
-        tabArray[10] = digitRatio
-        tabArray[11] = isShortened
-        tabArray[12] = normalize(cleanNoProtocol.count { it == '/' }.toFloat(), 0f, 15f)
-
-        return arrayOf(tabArray)
-    }
-
-    private fun cleanUrl(url: String): String {
-        var clean = url.trim().lowercase()
-        if (clean.startsWith("https://")) clean = clean.substring(8)
-        else if (clean.startsWith("http://")) clean = clean.substring(7)
-        return if (clean.length > MAX_URL_LENGTH) clean.substring(0, MAX_URL_LENGTH) else clean
-    }
-
-    private fun urlToByteBuffer(url: String): ByteBuffer {
-        val cleaned = cleanUrl(url)
-        val byteBuffer = ByteBuffer.allocateDirect(MAX_URL_LENGTH * 4)
-        byteBuffer.order(ByteOrder.nativeOrder())
-        for (i in 0 until MAX_URL_LENGTH) {
-            if (i < cleaned.length) {
-                val index = CHARS.indexOf(cleaned[i])
-                byteBuffer.putFloat(if (index != -1) (index + 1).toFloat() else 0f)
-            } else {
-                byteBuffer.putFloat(0f)
-            }
+    /**
+     * Get the full ThreatVerdict for a domain (used by repository layer).
+     */
+    fun getVerdict(domainName: String): ThreatVerdict {
+        val domain = getSafeHost(domainName)
+        if (domain.isEmpty()) {
+            return ThreatVerdict(
+                verdict = VerdictLevel.SAFE,
+                confidence = 0f,
+                explanation = "Empty domain.",
+                triggeredIndicators = emptyList(),
+                recommendedAction = "No action needed."
+            )
         }
-        byteBuffer.rewind()
-        return byteBuffer
-    }
 
-    private fun applyTFLite(url: String): Float {
-        val interp = interpreter ?: return 0.0f
-        val inputs = arrayOf(urlToByteBuffer(url), extractTabularFeatures(url))
-        val scoreOutput = Array(1) { FloatArray(1) }
-        val outputMap = mapOf(0 to scoreOutput)
+        // Cache hit
+        val cached = verdictCache.get(domain)
+        if (cached != null) return cached
 
-        return try {
-            synchronized(this) {
-                interp.runForMultipleInputsOutputs(inputs, outputMap)
-                scoreOutput[0][0]
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "TFLite failed", e)
-            0.0f
-        }
+        val score = analyzeDomainRisk(domainName)
+        return verdictCache.get(domain) ?: ThreatVerdict(
+            verdict = if (score >= THRESHOLD_PHISHING) VerdictLevel.PHISHING
+                     else if (score >= THRESHOLD_SAFE) VerdictLevel.SUSPICIOUS
+                     else VerdictLevel.SAFE,
+            confidence = score,
+            explanation = "Analysis complete.",
+            triggeredIndicators = emptyList(),
+            recommendedAction = "No action needed."
+        )
     }
 
     /**
      * Binary phishing decision.
      */
     fun isPhishing(urlOrDomain: String): Boolean {
-        val domain = getSafeHost(urlOrDomain)
-        val isNeutral = isNeutralInfrastructure(domain)
-        val threshold = if (isNeutral) THRESHOLD_NEUTRAL_PHISHING else THRESHOLD_PHISHING
         val score = analyzeDomainRisk(urlOrDomain)
-        return score > threshold
+        return score > THRESHOLD_PHISHING
     }
 
     fun close() {
-        interpreter?.close()
-        interpreter = null
+        neuroShieldEngine.close()
+        verdictCache.clear()
     }
 }

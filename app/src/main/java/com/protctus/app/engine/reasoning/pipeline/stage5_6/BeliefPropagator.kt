@@ -6,7 +6,10 @@ import com.protctus.app.engine.reasoning.models.ReasoningState
 
 object BeliefPropagator {
 
-    fun propagateToHypotheses(intents: Map<Intent, ReasoningState>): Map<Hypothesis, ReasoningState> {
+    fun propagateToHypotheses(
+        intents: Map<Intent, ReasoningState>,
+        properties: List<com.protctus.app.engine.reasoning.models.EvidenceNode> = emptyList()
+    ): Map<Hypothesis, ReasoningState> {
         val states = mutableMapOf<Hypothesis, ReasoningState>()
         for (hyp in Hypothesis.values()) {
             states[hyp] = ReasoningState()
@@ -53,10 +56,14 @@ object BeliefPropagator {
             maliciousState.uncertainty = conflict
             benignState.uncertainty = conflict
             
+            val hasSignatureMatch = properties.any { it.type == com.protctus.app.engine.reasoning.models.PropertyType.SIGNATURE }
+            
             if (maliciousSupport > benignSupport) {
                 benignState.probability *= (1.0f - conflict)
             } else {
-                maliciousState.probability *= (1.0f - conflict)
+                if (!hasSignatureMatch) {
+                    maliciousState.probability *= (1.0f - conflict)
+                }
             }
         }
 

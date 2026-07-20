@@ -16,7 +16,8 @@ import com.protctus.app.engine.correlation.ThreatCorrelationEngine
 import com.protctus.app.engine.ProcMalwareEngine
 import com.protctus.app.engine.SystemEvidence
 import com.protctus.app.engine.AppEvidence
-import com.protctus.app.engine.FileEvidence
+import com.protctus.app.engine.FileCategory
+import com.protctus.app.engine.FileFeatureExtractor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -322,78 +323,9 @@ class ScannerViewModel @Inject constructor(
     private suspend fun evaluateFileRisk(file: File, threats: MutableList<SmartScanThreat>) {
         try {
             val ext = file.extension.lowercase()
-            val riskyExts = setOf("apk", "dex", "so", "jar", "sh", "bat", "cmd", "ps1", "exe", "dll", "bin", "elf", "msi", "vbs", "js", "zip", "rar", "7z", "tar", "gz", "xz", "bz2", "cab", "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "rtf", "csv")
-            
-            if (!riskyExts.contains(ext)) return
-
-            val yaraMatches = mutableListOf<String>()
-            val clamAvMatches = mutableListOf<String>()
-            var fileEntropy: Double? = null
-            var hasDoubleExtension = false
-            var hasRTLO = false
-
-            if (file.length() in 1..(50 * 1024 * 1024)) {
-                try {
-                    val matches = com.protctus.yaracore.YaraScanner.scanRawFile(file.absolutePath)
-                    yaraMatches.addAll(matches)
-                } catch (_: Exception) {}
-
-                try {
-                    val clamEngine = com.protctus.app.engine.clam.ClamSignatureEngine.getInstance(appContext)
-                    if (clamEngine.ready) {
-                        val match = clamEngine.scanFileHash(file)
-                        if (match != null) clamAvMatches.add(match.malwareName)
-                    }
-                } catch (_: Exception) {}
-            }
-            
-            if (ext == "apk") {
-                val sampleSize = 8192
-                val freq = IntArray(256)
-                var totalBytes = 0
-                try {
-                    java.io.FileInputStream(file).use { fis ->
-                        val buf = ByteArray(sampleSize)
-                        val read = fis.read(buf)
-                        if (read > 0) {
-                            for (i in 0 until read) freq[buf[i].toInt() and 0xFF]++
-                            totalBytes = read
-                        }
-                    }
-                    if (totalBytes > 0) {
-                        var entropy = 0.0
-                        for (count in freq) {
-                            if (count > 0) {
-                                val p = count.toDouble() / totalBytes
-                                entropy -= p * (kotlin.math.ln(p) / kotlin.math.ln(2.0))
-                            }
-                        }
-                        fileEntropy = entropy
-                    }
-                } catch (e: Exception) {}
-            }
-
-            hasRTLO = file.name.contains("\u202E")
-            if (file.name.count { it == '.' } >= 2) {
-                hasDoubleExtension = true
-            }
-            
-            val evidence = FileEvidence(
-                fileName = file.name,
-                absolutePath = file.absolutePath,
-                extension = ext,
-                fileSize = file.length(),
-                yaraMatches = yaraMatches,
-                clamAvMatches = clamAvMatches,
-                entropy = fileEntropy,
-                isApkInWrongPlace = false,
-                hasDoubleExtension = hasDoubleExtension,
-                hasRTLO = hasRTLO,
-                hasEOCDAtEnd = false,
-                archiveRatio = null,
-                archiveTraversal = false,
-                hasEmbeddedExecutable = false
-            )
+            val category = FileFeatureExtractor.categorizeFile(ext)
+            if (category == FileCategory.UNKNOWN) return
+            val evidence = FileFeatureExtractor.extractEvidenceAdaptive(appContext, file, category) ?: return
 
             val engineVerdict = ProcMalwareEngine.evaluateFile(evidence)
 

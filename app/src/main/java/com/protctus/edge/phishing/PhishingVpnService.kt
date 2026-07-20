@@ -369,7 +369,6 @@ class PhishingVpnService : VpnService() {
             .setContentText(text)
             .setColor(color)
             .setAutoCancel(true)
-            .setFullScreenIntent(fullScreenPendingIntent, true)
             .setContentIntent(fullScreenPendingIntent)
             .addAction(android.R.drawable.ic_input_add, "\u2705 Mark Safe", safePendingIntent)
             .addAction(android.R.drawable.ic_delete, "\uD83D\uDEAB Block", blockPendingIntent)

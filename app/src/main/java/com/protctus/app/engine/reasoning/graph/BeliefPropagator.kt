@@ -1,6 +1,6 @@
 package com.protctus.app.engine.reasoning.graph
 
-import com.protctus.app.engine.reasoning.models.BeliefState
+import com.protctus.app.engine.reasoning.models.ReasoningState
 import com.protctus.app.engine.reasoning.models.Hypothesis
 import com.protctus.app.engine.reasoning.models.SemanticRelation
 
@@ -10,7 +10,7 @@ object BeliefPropagator {
      * Propagates belief from evidence nodes to hypotheses.
      * Updates Probability, Confidence, and Uncertainty independently.
      */
-    fun propagate(graph: ReasoningGraph, hypotheses: Map<Hypothesis, BeliefState>, computationDepth: Int = 1) {
+    fun propagate(graph: ReasoningGraph, hypotheses: Map<Hypothesis, ReasoningState>, computationDepth: Int = 1) {
         // If computation depth is 0, we don't perform heavy reasoning, just skip
         if (computationDepth <= 0) return
 
@@ -30,16 +30,16 @@ object BeliefPropagator {
                     SemanticRelation.SUPPORTS, SemanticRelation.STRENGTHENS -> {
                         supportWeight += effectivePower
                         maxConfidence = maxOf(maxConfidence, evidence.reliability.weight)
-                        state.recordSupport(evidence)
+                        state.supportingEvidence.add(evidence)
                     }
                     SemanticRelation.CONTRADICTS, SemanticRelation.WEAKENS -> {
                         contradictWeight += effectivePower
-                        state.recordContradiction(evidence)
+                        state.contradictingEvidence.add(evidence)
                     }
                     SemanticRelation.REQUIRES -> {
                         supportWeight += effectivePower * 1.5f
                         maxConfidence = maxOf(maxConfidence, evidence.reliability.weight)
-                        state.recordSupport(evidence)
+                        state.supportingEvidence.add(evidence)
                     }
                     SemanticRelation.UNKNOWN -> {
                         // Unknown relations increase uncertainty without affecting probability

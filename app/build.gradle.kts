@@ -132,6 +132,7 @@ android {
 
     androidResources {
         noCompress.add("tflite")
+        noCompress.add("onnx")
     }
 }
 
@@ -192,10 +193,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     
-    // TensorFlow Lite dependencies for Phishing scanner
-    implementation("org.tensorflow:tensorflow-lite:2.14.0")
-    implementation("org.tensorflow:tensorflow-lite-api:2.14.0")
-    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    // ONNX Runtime Mobile for NeuroShield phishing inference
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.0")
     
     // TOTP 2FA: QR code generation + HMAC
     implementation("com.google.zxing:core:3.5.3")

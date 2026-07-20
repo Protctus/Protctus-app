@@ -191,7 +191,7 @@ class ClamSignatureEngine private constructor(private val context: Context) {
      * @param file the file to scan
      * @return list of all detections (empty if clean)
      */
-    fun fullScan(file: File): List<ClamMatchResult> {
+    fun fullScan(file: File, maxPatternScanBytes: Long = MAX_PATTERN_SCAN_BYTES): List<ClamMatchResult> {
         val results = mutableListOf<ClamMatchResult>()
 
         // Phase 1: Hash scan (fast, definitive)
@@ -202,7 +202,7 @@ class ClamSignatureEngine private constructor(private val context: Context) {
         }
 
         // Phase 2: Pattern scan (slower, catches variants)
-        val patternResults = scanFilePatterns(file)
+        val patternResults = scanFilePatterns(file, maxPatternScanBytes)
         results.addAll(patternResults)
 
         return results

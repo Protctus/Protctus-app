@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -613,14 +614,35 @@ fun SecurityScoreCard(targetScore: Int) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(28.dp))
             .background(
                 Brush.linearGradient(
-                    colors = listOf(Color(0xFF2D2E35), com.protctus.app.ui.theme.SurfaceColor)
+                    colors = listOf(Color(0xFF1E1F24), Color(0xFF151619)),
+                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                    end = androidx.compose.ui.geometry.Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
                 )
             )
-            .padding(24.dp)
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color(0xFF3A3D46), Color.Transparent)
+                ),
+                shape = RoundedCornerShape(28.dp)
+            )
+            .padding(28.dp)
     ) {
+        // Subtle ambient glow behind the score
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .size(140.dp)
+                .offset(x = 10.dp, y = (-10).dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(Color(0xFF10B981).copy(alpha = 0.15f), Color.Transparent)
+                    )
+                )
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -639,8 +661,9 @@ fun SecurityScoreCard(targetScore: Int) {
                     Text(
                         text = "${animatedScore.value.toInt()}",
                         color = Color.White,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 42.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-1).sp
                     )
                     Text(
                         text = stringResource(R.string.score_100),
@@ -674,18 +697,20 @@ fun SecurityScoreCard(targetScore: Int) {
                     )
                     // Animated foreground track
                     drawArc(
-                        color = Color.White,
+                        brush = Brush.sweepGradient(
+                            colors = listOf(Color(0xFF10B981), Color(0xFF34D399), Color(0xFF10B981))
+                        ),
                         startAngle = -90f,
                         sweepAngle = 360f * animatedProgress.value,
                         useCenter = false,
-                        style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
+                        style = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round)
                     )
                 }
                 Icon(
                     imageVector = Icons.Outlined.Security,
                     contentDescription = "Shield",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                    tint = Color(0xFF10B981),
+                    modifier = Modifier.size(32.dp)
                 )
             }
         }
@@ -774,7 +799,7 @@ fun BoostersCard(navController: NavController, subscriptionTier: Int, onLockedFe
             }
         )
 
-        BoosterItem(title = "Rewards", icon = Icons.Outlined.WorkspacePremium, onClick = { navController.navigate(com.protctus.app.navigation.Route.Rewards) })
+        BoosterItem(title = "Phishing Scan", icon = Icons.Outlined.Public, onClick = { navController.navigate(com.protctus.app.navigation.Route.UrlScanner()) })
         BoosterItem(title = "Rankings", icon = Icons.Outlined.Leaderboard, onClick = { navController.navigate(com.protctus.app.navigation.Route.Leaderboard) })
     }
 }
