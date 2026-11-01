@@ -1,0 +1,39 @@
+{
+  "buildFiles": [
+    "A:\\Protctus\\Protctus-app\\app\\src\\main\\cpp\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "C:\\Users\\jatin\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "A:\\Protctus\\Protctus-app\\app\\.cxx\\RelWithDebInfo\\1o1t2o03\\x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "C:\\Users\\jatin\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "A:\\Protctus\\Protctus-app\\app\\.cxx\\RelWithDebInfo\\1o1t2o03\\x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "chakravyuh::@6890427a1f51a3e7e1df": {
+      "artifactName": "chakravyuh",
+      "abi": "x86",
+      "output": "A:\\Protctus\\Protctus-app\\app\\build\\intermediates\\cxx\\RelWithDebInfo\\1o1t2o03\\obj\\x86\\libchakravyuh.so",
+      "runtimeFiles": []
+    },
+    "vpn-core::@6890427a1f51a3e7e1df": {
+      "artifactName": "vpn-core",
+      "abi": "x86",
+      "output": "A:\\Protctus\\Protctus-app\\app\\build\\intermediates\\cxx\\RelWithDebInfo\\1o1t2o03\\obj\\x86\\libvpn-core.so",
+      "runtimeFiles": []
+    },
+    "native_scanner::@6890427a1f51a3e7e1df": {
+      "artifactName": "native_scanner",
+      "abi": "x86",
+      "output": "A:\\Protctus\\Protctus-app\\app\\build\\intermediates\\cxx\\RelWithDebInfo\\1o1t2o03\\obj\\x86\\libnative_scanner.so",
+      "runtimeFiles": []
+    }
+  }
+}

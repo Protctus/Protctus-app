@@ -1,0 +1,17 @@
+[
+{
+  "directory": "A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/arm64-v8a",
+  "command": "C:\\Users\\jatin\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android27 --sysroot=C:/Users/jatin/AppData/Local/Android/Sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dvpn_core_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O2 -g -DNDEBUG -fPIC -O3 -flto -fno-exceptions -fno-rtti -o CMakeFiles\\vpn-core.dir\\edge_phishing_pipeline.cpp.o -c A:\\Protctus\\Protctus-app\\app\\src\\main\\cpp\\edge_phishing_pipeline.cpp",
+  "file": "A:\\Protctus\\Protctus-app\\app\\src\\main\\cpp\\edge_phishing_pipeline.cpp"
+},
+{
+  "directory": "A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/arm64-v8a",
+  "command": "C:\\Users\\jatin\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android27 --sysroot=C:/Users/jatin/AppData/Local/Android/Sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dchakravyuh_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O2 -g -DNDEBUG -fPIC -O3 -flto -fno-exceptions -fno-rtti -o CMakeFiles\\chakravyuh.dir\\chakravyuh.cpp.o -c A:\\Protctus\\Protctus-app\\app\\src\\main\\cpp\\chakravyuh.cpp",
+  "file": "A:\\Protctus\\Protctus-app\\app\\src\\main\\cpp\\chakravyuh.cpp"
+},
+{
+  "directory": "A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/arm64-v8a",
+  "command": "C:\\Users\\jatin\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android27 --sysroot=C:/Users/jatin/AppData/Local/Android/Sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dnative_scanner_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O2 -g -DNDEBUG -fPIC -O3 -flto -fno-exceptions -fno-rtti -o CMakeFiles\\native_scanner.dir\\native_scanner.cpp.o -c A:\\Protctus\\Protctus-app\\app\\src\\main\\cpp\\native_scanner.cpp",
+  "file": "A:\\Protctus\\Protctus-app\\app\\src\\main\\cpp\\native_scanner.cpp"
+}
+]

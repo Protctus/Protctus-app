@@ -1,0 +1,5 @@
+A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/armeabi-v7a/CMakeFiles/vpn-core.dir
+A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/armeabi-v7a/CMakeFiles/chakravyuh.dir
+A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/armeabi-v7a/CMakeFiles/native_scanner.dir
+A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/armeabi-v7a/CMakeFiles/edit_cache.dir
+A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/armeabi-v7a/CMakeFiles/rebuild_cache.dir

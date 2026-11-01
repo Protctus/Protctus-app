@@ -1,0 +1,14 @@
+name = "protctus-payments-api"
+main = "src/index.ts"
+compatibility_date = "2024-03-29"
+compatibility_flags = [ "nodejs_compat" ]
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "protctus-ledger"
+database_id = "48234835-e1c7-452f-b230-072484692ae2"
+[triggers]
+crons = ["0 0 * * *"]

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Agent(Explore)",
+      "Bash(cargo check)",
+      "Bash(rustup *)",
+      "Bash(cargo clippy *)",
+      "Bash(findstr *)"
+    ]
+  },
+  "$version": 4
+}

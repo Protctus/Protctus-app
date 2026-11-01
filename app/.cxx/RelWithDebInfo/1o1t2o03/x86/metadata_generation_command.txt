@@ -1,0 +1,18 @@
+                        -HA:\Protctus\Protctus-app\app\src\main\cpp
+-DCMAKE_SYSTEM_NAME=Android
+-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+-DCMAKE_SYSTEM_VERSION=27
+-DANDROID_PLATFORM=android-27
+-DANDROID_ABI=x86
+-DCMAKE_ANDROID_ARCH_ABI=x86
+-DANDROID_NDK=C:\Users\jatin\AppData\Local\Android\sdk\ndk\27.0.12077973
+-DCMAKE_ANDROID_NDK=C:\Users\jatin\AppData\Local\Android\sdk\ndk\27.0.12077973
+-DCMAKE_TOOLCHAIN_FILE=C:\Users\jatin\AppData\Local\Android\sdk\ndk\27.0.12077973\build\cmake\android.toolchain.cmake
+-DCMAKE_MAKE_PROGRAM=C:\Users\jatin\AppData\Local\Android\sdk\cmake\3.22.1\bin\ninja.exe
+-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=A:\Protctus\Protctus-app\app\build\intermediates\cxx\RelWithDebInfo\1o1t2o03\obj\x86
+-DCMAKE_RUNTIME_OUTPUT_DIRECTORY=A:\Protctus\Protctus-app\app\build\intermediates\cxx\RelWithDebInfo\1o1t2o03\obj\x86
+-DCMAKE_BUILD_TYPE=RelWithDebInfo
+-BA:\Protctus\Protctus-app\app\.cxx\RelWithDebInfo\1o1t2o03\x86
+-GNinja
+                        Build command args: []
+                        Version: 2
