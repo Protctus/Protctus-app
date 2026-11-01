@@ -1,1 +1,0 @@
-A:\Protctus\Protctus-app\yara-core-module\src\main\cpp\CMakeLists.txt

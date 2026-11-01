@@ -1,6 +1,0 @@
-{
-  "temperature": 1.0176691729323308,
-  "feature_count": 53,
-  "model": "LogisticRegression",
-  "seed": 42
-}

@@ -3,7 +3,9 @@ package com.protctus.edge.phishing
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import com.protctus.app.data.local.dataStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -70,7 +72,7 @@ class CloudThreatReporter(private val context: Context) : ThreatReporter {
      */
     private suspend fun isDataSharingEnabled(): Boolean =
         withContext(Dispatchers.IO) {
-            context.dataStore.data.firstOrNull()?.getBoolean(DATA_SHARING_KEY) ?: false
+            context.dataStore.data.firstOrNull()?.let { it[DATA_SHARING_KEY] } ?: false
         }
 
     override suspend fun reportBlocked(domain: String, score: Float, engineBreakdown: String) {

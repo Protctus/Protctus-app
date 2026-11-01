@@ -168,8 +168,8 @@ class NeuroShieldEngine(private val context: Context) {
     private fun calibrate(rawProb: Float, temperature: Float): Float {
         val eps = 1e-6f
         val p = rawProb.coerceIn(eps, 1f - eps)
-        val logit = kotlin.math.log(p / (1f - p))
-        return (1.0f / (1.0f + kotlin.math.exp(-logit / temperature))).coerceIn(0f, 1f)
+        val logit = Math.log(p.toDouble() / (1.0 - p.toDouble()))
+        return (1.0 / (1.0 + Math.exp(-logit / temperature.toDouble()))).toFloat().coerceIn(0f, 1f)
     }
 
     /**
@@ -229,17 +229,17 @@ class NeuroShieldEngine(private val context: Context) {
             // LightGBM ONNX output [1] = probability map: List<Map<Long, Float>>
             // Each entry maps class_id → probability. We want class 1 (phishing).
             val probabilities = results.get(OUTPUT_PROBABILITIES)
-            if (probabilities.isPresent) {
-                val probValue = probabilities.get().value
-                extractPhishingProbability(probValue)
-            } else {
-                // Fallback: try output index 1 directly
-                val output = results.get(1)
-                if (output.isPresent) {
-                    extractPhishingProbability(output.get().value)
-                } else {
+            if (probabilities != null) {
+                try {
+                    val tensor = probabilities as OnnxTensor
+                    val value = tensor.getValue() as? FloatArray
+                    val prob = value?.getOrElse(1) { 0f }?.coerceIn(0f, 1f) ?: 0.0f
+                    prob
+                } catch (e: Exception) {
                     0.0f
                 }
+            } else {
+                0.0f
             }
         } finally {
             inputTensor.close()
@@ -268,9 +268,10 @@ class NeuroShieldEngine(private val context: Context) {
                 firstMap?.get(1L) ?: firstMap?.values?.lastOrNull() ?: 0.0f
             }
             // Direct float array [batch, classes]
-            is Array<FloatArray> -> {
-                val row = probValue.firstOrNull()
-                if (row != null && row.size >= 2) row[1] else row?.lastOrNull() ?: 0.0f
+            is Array<*> -> {
+                probValue.firstOrNull()?.let { row ->
+                    if (row is FloatArray && row.size >= 2) row[1] else 0.0f
+                } ?: 0.0f
             }
             else -> {
                 Log.w(TAG, "Unexpected ONNX output type: ${probValue?.javaClass?.name}")

@@ -30,93 +30,85 @@ class LightGBMModel private constructor(
     private val featureCount: Int
 ) {
 
-    private companion object {
+    companion object {
         private const val TAG = "LightGBMModel"
-    }
 
-    /**
-     * Load a LightGBM text model from assets.
-     *
-     * @param context Android context
-     * @param assetName Asset file name (e.g., "lightgbm_model.txt")
-     * @return Loaded model, or null if loading fails
-     */
-    @JvmStatic
-    fun loadFromAssets(context: Context, assetName: String): LightGBMModel? {
-        return try {
-            context.assets.open(assetName).use { inputStream ->
-                val reader = BufferedReader(InputStreamReader(inputStream))
-                loadFromReader(reader)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load LightGBM model from assets: $assetName", e)
-            null
-        }
-    }
-
-    private fun loadFromReader(reader: BufferedReader): LightGBMModel? {
-        return try {
-            // Parse header
-            var line: String? = reader.readLine()
-            var numTrees = 0
-            var featureCount = 0
-            var shrinkage = 1f
-            var baseline = 0f
-
-            while (line != null) {
-                when {
-                    line.startsWith("tree") -> {
-                        // Skip tree header line
-                    }
-                    line.startsWith("version=") -> {}
-                    line.startsWith("num_class=") -> {}
-                    line.startsWith("num_tree_per_iteration=") -> {
-                        numTrees = line.substringAfter("=").toInt()
-                    }
-                    line.startsWith("label_index=") -> {}
-                    line.startsWith("max_feature_idx=") -> {
-                        featureCount = line.substringAfter("=").toInt() + 1
-                    }
-                    line.startsWith("objective=") -> {}
-                    line.startsWith("feature_names=") -> {}
-                    line.startsWith("feature_infos=") -> {}
-                    line.startsWith("tree_sizes=") -> {}
-                    line.startsWith("shrinkage=") -> {
-                        shrinkage = line.substringAfter("=").toFloat()
-                    }
-                    line == "Tree=0" -> {
-                        // Start of first tree
-                        break
-                    }
+        @JvmStatic
+        fun loadFromAssets(context: Context, assetName: String): LightGBMModel? {
+            return try {
+                context.assets.open(assetName).use { inputStream ->
+                    val reader = BufferedReader(InputStreamReader(inputStream))
+                    loadFromReader(reader)
                 }
-                line = reader.readLine()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load LightGBM model from assets: $assetName", e)
+                null
             }
-
-            // Parse all trees
-            val trees = mutableListOf<TreeModel>()
-            var currentTree: TreeModel? = null
-
-            while (line != null) {
-                if (line.startsWith("Tree=")) {
-                    if (currentTree != null) {
-                        trees.add(currentTree)
-                    }
-                    currentTree = parseTree(reader, line)
-                }
-                line = reader.readLine()
-            }
-            if (currentTree != null) {
-                trees.add(currentTree)
-            }
-
-            LightGBMModel(trees, shrinkage, baseline, featureCount)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse LightGBM model", e)
-            null
         }
-    }
 
-    private fun parseTree(reader: BufferedReader, treeHeader: String): TreeModel {
+        private fun loadFromReader(reader: BufferedReader): LightGBMModel? {
+            return try {
+                // Parse header
+                var line: String? = reader.readLine()
+                var numTrees = 0
+                var featureCount = 0
+                var shrinkage = 1f
+                var baseline = 0f
+
+                while (line != null) {
+                    when {
+                        line.startsWith("tree") -> {
+                            // Skip tree header line
+                        }
+                        line.startsWith("version=") -> {}
+                        line.startsWith("num_class=") -> {}
+                        line.startsWith("num_tree_per_iteration=") -> {
+                            numTrees = line.substringAfter("=").toInt()
+                        }
+                        line.startsWith("label_index=") -> {}
+                        line.startsWith("max_feature_idx=") -> {
+                            featureCount = line.substringAfter("=").toInt() + 1
+                        }
+                        line.startsWith("objective=") -> {}
+                        line.startsWith("feature_names=") -> {}
+                        line.startsWith("feature_infos=") -> {}
+                        line.startsWith("tree_sizes=") -> {}
+                        line.startsWith("shrinkage=") -> {
+                            shrinkage = line.substringAfter("=").toFloat()
+                        }
+                        line == "Tree=0" -> {
+                            // Start of first tree
+                            break
+                        }
+                    }
+                    line = reader.readLine()
+                }
+
+                // Parse all trees
+                val trees = mutableListOf<TreeModel>()
+                var currentTree: TreeModel? = null
+
+                while (line != null) {
+                    if (line.startsWith("Tree=")) {
+                        if (currentTree != null) {
+                            trees.add(currentTree)
+                        }
+                        currentTree = parseTree(reader, line)
+                    }
+                    line = reader.readLine()
+                }
+                if (currentTree != null) {
+                    trees.add(currentTree)
+                }
+
+                LightGBMModel(trees, shrinkage, baseline, featureCount)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to parse LightGBM model", e)
+                null
+            }
+        }
+
+        private fun parseTree(reader: BufferedReader, treeHeader: String): TreeModel {
         val treeIndex = treeHeader.substringAfter("Tree=").toInt()
         var numLeaves = 0
         var splitFeatures = mutableListOf<Int>()
@@ -147,50 +139,50 @@ class LightGBMModel private constructor(
                     splitFeatures = line.substringAfter("=")
                         .split(" ")
                         .filter { it.isNotEmpty() }
-                        .map { it.toInt() }
+                        .map { it.toInt() }.toMutableList()
                 }
                 line.startsWith("split_gain=") -> {}
                 line.startsWith("threshold=") -> {
                     thresholds = line.substringAfter("=")
                         .split(" ")
                         .filter { it.isNotEmpty() }
-                        .map { it.toFloat() }
+                        .map { it.toFloat() }.toMutableList()
                 }
                 line.startsWith("decision_type=") -> {
                     decisionTypes = line.substringAfter("=")
                         .split(" ")
                         .filter { it.isNotEmpty() }
-                        .map { it.toInt() }
+                        .map { it.toInt() }.toMutableList()
                 }
                 line.startsWith("left_child=") -> {
                     leftChildren = line.substringAfter("=")
                         .split(" ")
                         .filter { it.isNotEmpty() }
-                        .map { it.toInt() }
+                        .map { it.toInt() }.toMutableList()
                 }
                 line.startsWith("right_child=") -> {
                     rightChildren = line.substringAfter("=")
                         .split(" ")
                         .filter { it.isNotEmpty() }
-                        .map { it.toInt() }
+                        .map { it.toInt() }.toMutableList()
                 }
                 line.startsWith("leaf_value=") -> {
                     leafValues = line.substringAfter("=")
                         .split(" ")
                         .filter { it.isNotEmpty() }
-                        .map { it.toFloat() }
+                        .map { it.toFloat() }.toMutableList()
                 }
                 line.startsWith("leaf_weight=") -> {
                     leafWeights = line.substringAfter("=")
                         .split(" ")
                         .filter { it.isNotEmpty() }
-                        .map { it.toFloat() }
+                        .map { it.toFloat() }.toMutableList()
                 }
                 line.startsWith("leaf_count=") -> {
                     leafCounts = line.substringAfter("=")
                         .split(" ")
                         .filter { it.isNotEmpty() }
-                        .map { it.toInt() }
+                        .map { it.toInt() }.toMutableList()
                 }
                 line.startsWith("internal_value=") -> {}
                 line.startsWith("internal_weight=") -> {}
@@ -213,6 +205,7 @@ class LightGBMModel private constructor(
             leafCounts = leafCounts
         )
     }
+}
 
     /**
      * Run inference on a feature vector.

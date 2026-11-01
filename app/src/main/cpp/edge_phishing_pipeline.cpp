@@ -223,7 +223,7 @@ static void* vpn_dns_loop(void* arg) {
                                     break;
                                 }
                                 int len = *p++;
-                                if ((ssize_t)(p + len) > end) break; // label runs past packet
+                                if ((uint8_t*)(p + len) > end) break; // label runs past packet
                                 for (int j = 0; j < len && d_idx < 254 && p < end; j++) domain[d_idx++] = *p++;
                                 domain[d_idx++] = '.';
                             }

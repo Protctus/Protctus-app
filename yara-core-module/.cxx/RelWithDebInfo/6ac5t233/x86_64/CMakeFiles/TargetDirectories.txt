@@ -1,4 +1,0 @@
-A:/Protctus/Protctus-app/yara-core-module/.cxx/RelWithDebInfo/6ac5t233/x86_64/CMakeFiles/libyara.dir
-A:/Protctus/Protctus-app/yara-core-module/.cxx/RelWithDebInfo/6ac5t233/x86_64/CMakeFiles/yara-core.dir
-A:/Protctus/Protctus-app/yara-core-module/.cxx/RelWithDebInfo/6ac5t233/x86_64/CMakeFiles/edit_cache.dir
-A:/Protctus/Protctus-app/yara-core-module/.cxx/RelWithDebInfo/6ac5t233/x86_64/CMakeFiles/rebuild_cache.dir

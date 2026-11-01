@@ -1,6 +1,0 @@
-name = "protctus-phishing-engine"
-main = "src/index.ts"
-compatibility_date = "2024-05-01"
-
-[vars]
-PROTCTUS_API_SECRET = "REPLACE_WITH_SECURE_SECRET_IN_PROD"

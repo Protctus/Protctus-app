@@ -51,10 +51,10 @@ object YaraScanner {
     /** Returns true if the native YARA engine is available for scanning. */
     fun isNativeAvailable(): Boolean = nativeAvailable
 
-    private external fun initYaraEngine(compiledRulesPath: String): Boolean
-    private external fun destroyYaraEngine()
-    private external fun scanMemory(buffer: ByteArray, size: Int): Array<String>
-    private external fun scanFile(filePath: String): Array<String>
+    external fun initYaraEngine(compiledRulesPath: String): Boolean
+    external fun destroyYaraEngine()
+    external fun scanMemory(buffer: ByteArray, size: Int): Array<String>
+    external fun scanFile(filePath: String): Array<String>
 
     private fun requireNative(): Boolean {
         if (!nativeAvailable) {

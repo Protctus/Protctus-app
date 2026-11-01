@@ -1,45 +1,280 @@
-# Android/Gradle
-*.iml
-.gradle/
-.idea/
-/local.properties
-.DS_Store
-/build/
-app/build/
-vpn-core-module/build/
-yara-core-module/build/
-/captures/
-.externalNativeBuild/
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  PROTCTUS — STRICT .gitignore for public GitHub repository                ║
+# ║  Last updated: 2026-11-01                                                 ║
+# ║                                                                           ║
+# ║  RULE: When in doubt, EXCLUDE. Add explicit !un-ignore only for files     ║
+# ║  that are confirmed safe for public exposure.                             ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
 
-# Node.js
-node_modules/
-npm-debug.log
-yarn-error.log
+# ──────────────────────────────────────────────────────────────────────────────
+# 1. SECRETS, CREDENTIALS & SIGNING KEYS  (MOST CRITICAL)
+# ──────────────────────────────────────────────────────────────────────────────
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.env-python/
-
-# Secrets / environment (never commit real credentials)
+# Environment / config files with secrets
 .env
-.env.local
+.env.*
 *.env
 local.properties
 
-# Logs and Temp
+# Firebase service-account & app config (contains API keys)
+google-services.json
+**/google-services.json
+GoogleService-Info.plist
+
+# Admin panel config with embedded secrets (Firebase private key, Groq key, etc.)
+protctus-admin/env.js
+
+# Android signing keystores & keys
+*.jks
+*.keystore
+protctus-release-key.jks
+release-key.jks
+*.pem
+*.p12
+*.key
+
+# Cloudflare Wrangler configs (may contain database IDs, secrets)
+**/wrangler.toml
+
+# Service account JSON files
+*-service-account.json
+*-credentials.json
+firebase-admin*.json
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 2. ANDROID / GRADLE BUILD OUTPUT
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Gradle cache & wrapper downloaded files
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Project-level and module-level build output
+/build/
+**/build/
+
+# NDK / CMake build caches (massive, machine-specific)
+**/.cxx/
+.externalNativeBuild/
+.externalNativeBuild
+
+# Local properties (SDK path, machine-specific)
+/local.properties
+
+# Android Studio captures
+/captures/
+
+# Generated navigation args
+**/navigation-args/
+
+# APK / AAB binaries
+*.apk
+*.aab
+*.ap_
+
+# Native shared libraries (built, not source)
+*.so
+!app/src/main/jniLibs/**/*.so
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 3. IDE & EDITOR FILES
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Fleet
+.fleet/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. OPERATING SYSTEM FILES
+# ──────────────────────────────────────────────────────────────────────────────
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.directory
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 5. NODE.JS / JAVASCRIPT / TYPESCRIPT
+# ──────────────────────────────────────────────────────────────────────────────
+
+node_modules/
+**/node_modules/
+package-lock.json
+**/package-lock.json
+yarn.lock
+pnpm-lock.yaml
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.yarn/
+
+# Cloudflare Workers
+.wrangler/
+**/.wrangler/
+
+# Build output
+dist/
+.next/
+.nuxt/
+.output/
+.cache/
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 6. PYTHON
+# ──────────────────────────────────────────────────────────────────────────────
+
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env-python/
+.conda/
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+*.whl
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 7. RUST (neuroshield crate)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Cargo build output (can be 100s of MB)
+**/target/
+neuroshield/target/
+
+# Cargo lock is typically committed for binaries but we build a lib crate;
+# uncomment the next line if you do NOT want to pin deps:
+# neuroshield/Cargo.lock
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 8. ML EVALUATION — LARGE DATA & EPHEMERAL RESULTS
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Phishing fixture datasets (11+ MB, downloaded from upstream)
+ml/evaluation/fixtures/phishing-domains-ACTIVE.txt
+ml/evaluation/fixtures/openphish_feed.txt
+
+# Evaluation results & logs (ephemeral, reproducible)
+ml/evaluation/results/
+ml/training/
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 9. LOGS & TEMPORARY FILES
+# ──────────────────────────────────────────────────────────────────────────────
+
 *.log
 crash_logs.txt
 err.txt
 err_utf8.txt
 compile_err.txt
 build_out.txt
+hs_err_pid*
 
-# VS Code
-.vscode/
+# ──────────────────────────────────────────────────────────────────────────────
+# 10. AGENT / AETHER TOOLING (not part of the product)
+# ──────────────────────────────────────────────────────────────────────────────
 
-# Build caches
-.wrangler/
+.aether/
+.agents/
+.gemini/
+.cursor/
+.windsurf/
+.copilot/
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 11. UTILITY / SCAFFOLD SCRIPTS (local dev helpers, not product code)
+# ──────────────────────────────────────────────────────────────────────────────
+
+aether.bat
+aether.ps1
+dump_env.ps1
+kill-daemons.bat
+kill-daemons.ps1
+build_reports.py
+make_doc1_full.py
+make_doc2.py
+validate_content.py
+validate_docx.py
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 12. GENERATED REPORTS / BINARY DOCS
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Word documents (generated by scripts, not source-of-truth)
+*.docx
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 13. MISCELLANEOUS
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Kotlin incremental compilation
 .kotlin/
+
+# ProGuard mapping files
+**/mapping/
+mapping.txt
+
+# Lint reports
+lint-results*
+
+# Test output
+test-results/
+**/test-results/
+
+# Coverage
+jacoco/
+**/jacoco/
+*.exec
+
+# Heap dumps
+*.hprof
+
+# Kotlin script caches
+*.kts.compiled

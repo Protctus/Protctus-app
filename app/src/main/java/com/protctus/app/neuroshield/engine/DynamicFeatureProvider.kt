@@ -205,13 +205,13 @@ class DynamicFeatureProvider(private val context: Context) {
     }
 
     private fun parseTldRates(data: Map<String, Any>): Map<String, Float> {
-        return (data["tld_phishing_rates"] as? Map<*, *> ?: emptyMap())
+        return (data["tld_phishing_rates"] as? Map<String, *> ?: emptyMap<String, Any>())
             .entries
-            .associate { it.key.toString() to (it.value as? Number ?: 0f).toFloat() }
+            .associate { it.key to (it.value as? Number ?: 0f).toFloat() }
     }
 
     private fun parseStringSet(data: Map<String, Any>, key: String): Set<String> {
-        return (data[key] as? List<*> ?: emptyList())
+        return (data[key] as? List<*> ?: emptyList<String>())
             .filterIsInstance<String>()
             .toSet()
     }

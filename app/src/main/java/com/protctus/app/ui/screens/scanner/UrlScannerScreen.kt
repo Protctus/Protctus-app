@@ -82,42 +82,41 @@ fun UrlScannerScreen(sharedUrl: String? = null) {
 
     val scanAction = { urlToScan: String ->
         val host = urlToScan.trim().lowercase()
-        if (host.isEmpty()) {
-            errorMessage = "Please enter a URL or domain."
-            uiState = ScanUiState.ERROR
-            return@scanAction
-        }
-        // Basic URL-shape validation: must look like a host/URL, reject obvious junk.
-        val looksLikeUrl = Patterns.WEB_URL.matcher(urlToScan).matches() ||
-            host.contains(".") && host.indexOf(' ') == -1
-        if (!looksLikeUrl) {
-            errorMessage = "Invalid URL or domain format."
-            uiState = ScanUiState.ERROR
-            return@scanAction
-        }
+        if (host.isNotEmpty()) {
+            // Basic URL-shape validation: must look like a host/URL, reject obvious junk.
+            val looksLikeUrl = Patterns.WEB_URL.matcher(urlToScan).matches() ||
+                host.contains(".") && host.indexOf(' ') == -1
+            if (looksLikeUrl) {
+                uiState = ScanUiState.SCANNING
+                coroutineScope.launch {
+                    try {
+                        // ── ON-DEVICE DETECTION (NeuroShield ONNX + heuristics) ──
+                        // Run inference off the Main thread (inference + heuristics can take a few ms).
+                        val v = withContext(Dispatchers.IO) { detector.getVerdict(urlToScan) }
+                        verdict = v
 
-        uiState = ScanUiState.SCANNING
-        coroutineScope.launch {
-            try {
-                // ── ON-DEVICE DETECTION (NeuroShield ONNX + heuristics) ──
-                // Run inference off the Main thread (inference + heuristics can take a few ms).
-                val v = withContext(Dispatchers.IO) { detector.getVerdict(urlToScan) }
-                verdict = v
+                        uiState = when (v.verdict) {
+                            VerdictLevel.PHISHING -> ScanUiState.MALICIOUS
+                            VerdictLevel.SUSPICIOUS -> ScanUiState.SUSPICIOUS
+                            VerdictLevel.SAFE -> ScanUiState.SAFE
+                            VerdictLevel.REQUIRES_NETWORK_VERIFICATION -> ScanUiState.SUSPICIOUS
+                        }
 
-                uiState = when (v.verdict) {
-                    VerdictLevel.PHISHING -> ScanUiState.MALICIOUS
-                    VerdictLevel.SUSPICIOUS -> ScanUiState.SUSPICIOUS
-                    VerdictLevel.SAFE -> ScanUiState.SAFE
-                    VerdictLevel.REQUIRES_NETWORK_VERIFICATION -> ScanUiState.SUSPICIOUS
+                        if (v.verdict == VerdictLevel.PHISHING) {
+                            vibrateDevice(context)
+                        }
+                    } catch (e: Exception) {
+                        errorMessage = "Scan failed: ${e.localizedMessage ?: "unknown error"}"
+                        uiState = ScanUiState.ERROR
+                    }
                 }
-
-                if (v.verdict == VerdictLevel.PHISHING) {
-                    vibrateDevice(context)
-                }
-            } catch (e: Exception) {
-                errorMessage = "Scan failed: ${e.localizedMessage ?: "unknown error"}"
+            } else {
+                errorMessage = "Invalid URL or domain format."
                 uiState = ScanUiState.ERROR
             }
+        } else {
+            errorMessage = "Please enter a URL or domain."
+            uiState = ScanUiState.ERROR
         }
     }
 
@@ -257,7 +256,8 @@ fun UrlScannerScreen(sharedUrl: String? = null) {
             }
 
             // Triggered indicators (actionable basis for the verdict)
-            if (verdict != null && verdict!.triggeredIndicators.isNotEmpty() &&
+            val v = verdict
+            if (v != null && v.triggeredIndicators.isNotEmpty() &&
                 uiState != ScanUiState.SCANNING && uiState != ScanUiState.ERROR) {
                 AnimatedVisibility(visible = true) {
                     Column(
@@ -274,7 +274,7 @@ fun UrlScannerScreen(sharedUrl: String? = null) {
                             modifier = Modifier.align(Alignment.Start)
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        verdict!.triggeredIndicators.forEach { indicator ->
+                        v.triggeredIndicators.forEach { indicator ->
                             Text(
                                 text = "• $indicator",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,

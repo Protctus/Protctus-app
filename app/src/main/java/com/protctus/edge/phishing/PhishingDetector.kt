@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.protctus.app.neuroshield.engine.EnsemblePhishingEngine
 import com.protctus.app.neuroshield.engine.ThreatVerdict
+import com.protctus.app.neuroshield.engine.TrustedDomainCache
 import com.protctus.app.neuroshield.engine.VerdictLevel
 import kotlin.math.log2
 import kotlinx.coroutines.CoroutineScope
@@ -107,7 +108,8 @@ class PhishingDetector(private val context: Context) {
     @Volatile private var trancoReady = false
     @Volatile private var enginesReady = false
     private var userWhitelist: Set<String> = emptySet()
-    private var markovTrainingSet: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private val markovTrainingSet: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private val verdictCache = TrustedDomainCache()
 
     init {
         loadTrustedDomains()
@@ -154,7 +156,7 @@ class PhishingDetector(private val context: Context) {
             } catch (e: Exception) {
                 Log.e(TAG, "Markov training failed", e)
             } finally {
-                markovTrainingSet = null // release ~40MB
+                markovTrainingSet.clear() // release ~40MB
                 enginesReady = true
             }
         }
