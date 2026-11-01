@@ -62,8 +62,8 @@ def run(text, bold=False, italic=False, size=11, font='Calibri', color=None,
 
 
 def rich_runs(parts, size=11, font='Calibri'):
-    """parts: list of (text, dict-of-run-props)"""
-    out = '<w:r>'
+    """parts: list of (text, dict-of-run-props). Each part gets its own <w:r>."""
+    out = ''
     for text, props in parts:
         b = props.get('bold', False)
         i = props.get('italic', False)
@@ -72,6 +72,7 @@ def rich_runs(parts, size=11, font='Calibri'):
         fn = props.get('font', font)
         col = props.get('color')
         hl = props.get('highlight')
+        out += '<w:r>'
         out += '<w:rPr>'
         if b:
             out += '<w:b/>'
