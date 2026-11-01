@@ -4,18 +4,19 @@ import android.content.Context
 import android.util.Log
 
 /**
- * Multi-model ensemble phishing detection engine.
+ * Multi-model ensemble phishing detection engine — 4-model ensemble.
  *
  * Combines multiple independent detection signals into a single verdict:
  *   1. Signature layer (exact known-phishing domains) — near-zero cost, highest confidence
- *   2. Calibrated ONNX model (LogisticRegression, 53 features) — primary ML signal
- *   3. LightGBM model (53 features) — secondary ML, only run when ONNX is uncertain (cascade)
- *   4. Heuristic engines (BK-Tree, Markov, Viterbi, structural) — deterministic rules
+ *   2. Calibrated ONNX model (LogisticRegression, 53 features) — primary ML signal, runs on every query
+ *   3. LightGBM model (1000 trees, 53 features) — secondary ML, cascade band
+ *   4. HistGradientBoosting model (ONNX, 53 features) — tertiary ML, cascade band
+ *   5. Heuristic engines (BK-Tree, Markov, Viterbi, structural) — deterministic rules
  *
  * Decision policy (phishing = positive class):
  *   - Signature match → PHISHING (block) immediately
- *   - If ONNX is confident (safe <0.15 or phishing >0.85), skip LightGBM to save battery
- *   - Otherwise fuse calibrated ONNX + LightGBM + heuristics
+ *   - If ONNX is confident (safe <0.15 or phishing >0.85), skip LightGBM + HGB to save battery
+ *   - Otherwise fuse calibrated ONNX + LightGBM + HGB + heuristics
  *   - Fused score >= THRESHOLD_PHISHING → PHISHING (block)
  *   - Fused score >= THRESHOLD_SUSPICIOUS → SUSPICIOUS (warn)
  *   - All models agree safe → SAFE
@@ -25,7 +26,7 @@ import android.util.Log
  *
  * Battery/thermal design:
  *   - Calibrated ONNX (LogisticRegression) is tiny and fast — runs on every query.
- *   - LightGBM (larger) is only run in the uncertainty band (cascade), saving CPU.
+ *   - LightGBM and HGB (larger) are only run in the uncertainty band (cascade), saving CPU.
  *   - All inference is on-demand (per URL/DNS query), never continuous.
  */
 class EnsemblePhishingEngine(private val context: Context) {
@@ -38,16 +39,17 @@ class EnsemblePhishingEngine(private val context: Context) {
         const val THRESHOLD_SUSPICIOUS = 0.30f
         const val SIGNAL_ABSENT = 0.01f
 
-        // Cascade band: if calibrated ONNX score falls in this range, run LightGBM too.
+        // Cascade band: if calibrated ONNX score falls in this range, run LightGBM + HGB too.
         // Outside this band, ONNX is confident enough to decide alone (saves battery).
         const val CASCADE_LOW = 0.15f
         const val CASCADE_HIGH = 0.85f
 
         // Model weights for fusion (sum to 1.0 across active signals only).
-        const val WEIGHT_ONNX = 0.50f
-        const val WEIGHT_LIGHTGBM = 0.30f
-        const val WEIGHT_HEURISTIC = 0.15f
-        const val WEIGHT_SIGNATURE = 0.05f
+        const val WEIGHT_ONNX = 0.40f
+        const val WEIGHT_LIGHTGBM = 0.25f
+        const val WEIGHT_HGB = 0.25f
+        const val WEIGHT_HEURISTIC = 0.08f
+        const val WEIGHT_SIGNATURE = 0.02f
 
         // Signature match contributes near-certain phishing signal.
         const val SIGNATURE_SCORE = 0.95f
@@ -56,6 +58,7 @@ class EnsemblePhishingEngine(private val context: Context) {
     private val featureExtractor = LexicalFeatureExtractor()
     private val dynamicFeatureProvider: DynamicFeatureProvider?
     private val lightGBMModel: LightGBMModel?
+    private val hgbModel: HistGradientBoostingModel?
     private val neuroShieldEngine: NeuroShieldEngine?
     private val verdictEngine = VerdictEngine()
 
@@ -70,12 +73,16 @@ class EnsemblePhishingEngine(private val context: Context) {
         neuroShieldEngine = NeuroShieldEngine(context)
         neuroShieldEngine?.initialize()
 
+        // Initialize HistGradientBoosting (ONNX) engine — tertiary ML
+        hgbModel = HistGradientBoostingModel(context)
+        hgbModel?.initialize()
+
         // Initialize dynamic feature provider
         dynamicFeatureProvider = DynamicFeatureProvider(context)
 
         // Load bundled phishing signatures
         phishingSignatures = loadPhishingSignatures()
-        Log.i(TAG, "Ensemble ready: ${phishingSignatures.size} signatures, ONNX=${neuroShieldEngine?.isReady == true}, LightGBM=${lightGBMModel != null}")
+        Log.i(TAG, "Ensemble ready: ${phishingSignatures.size} signatures, ONNX=${neuroShieldEngine?.isReady == true}, LightGBM=${lightGBMModel != null}, HGB=${hgbModel?.isReady == true}")
     }
 
     /**
@@ -109,7 +116,7 @@ class EnsemblePhishingEngine(private val context: Context) {
         // Immediate block on high-confidence signature.
         if (signatureMatch) {
             return buildVerdict(
-                cleanDomain, features, signatureScore, 0.0f, boundedHeuristic(heuristicScore),
+                cleanDomain, features, signatureScore, 0.0f, 0.0f, boundedHeuristic(heuristicScore),
                 true, listOf("Signature match: known phishing domain")
             )
         }
@@ -117,21 +124,23 @@ class EnsemblePhishingEngine(private val context: Context) {
         // ── Layer 1: Calibrated ONNX model (LogisticRegression) ──
         val onnxScore = runCalibratedONNX(cleanDomain)
 
-        // ── Cascade: skip LightGBM when ONNX is confident (saves battery/heat) ──
+        // ── Cascade: skip LightGBM + HGB when ONNX is confident (saves battery/heat) ──
         val runLightGBM = onnxScore > CASCADE_LOW && onnxScore < CASCADE_HIGH
         val lgbScore = if (runLightGBM) runLightGBM(features) else 0.0f
+        val hgbScore = if (runLightGBM) runHGB(features) else 0.0f
 
         // ── Layer 3: detector-supplied heuristic evidence ──
         val boundedHeuristicScore = boundedHeuristic(heuristicScore)
 
         // ── Score Fusion (only active signals) ──
-        val fusedScore = fuseScores(onnxScore, lgbScore, boundedHeuristicScore, signatureScore)
+        val fusedScore = fuseScores(onnxScore, lgbScore, hgbScore, boundedHeuristicScore, signatureScore)
 
         // ── Evidence presence ──
         val hasONNXSignal = onnxScore > SIGNAL_ABSENT
         val hasLGBSignal = lgbScore > SIGNAL_ABSENT
+        val hasHGBSignal = hgbScore > SIGNAL_ABSENT
         val hasHeuristicSignal = boundedHeuristicScore > SIGNAL_ABSENT
-        val evidencePresent = hasONNXSignal || hasLGBSignal || hasHeuristicSignal || signatureMatch
+        val evidencePresent = hasONNXSignal || hasLGBSignal || hasHGBSignal || hasHeuristicSignal || signatureMatch
 
         // ── Verdict Classification ──
         val verdict = when {
@@ -151,6 +160,11 @@ class EnsemblePhishingEngine(private val context: Context) {
         if (lgbScore > THRESHOLD_PHISHING) {
             indicators.add("LightGBM ML model flagged phishing (score=${"%.2f".format(lgbScore)})")
         }
+        if (hgbScore > THRESHOLD_PHISHING) {
+            indicators.add("HistGradientBoosting ML model flagged phishing (score=${"%.2f".format(hgbScore)})")
+        } else if (hgbScore > SIGNAL_ABSENT) {
+            indicators.add("HGB signal: ${"%.2f".format(hgbScore)}")
+        }
         if (boundedHeuristicScore > THRESHOLD_PHISHING) {
             indicators.add("Heuristic analysis flagged phishing (score=${"%.2f".format(boundedHeuristicScore)})")
         }
@@ -161,12 +175,12 @@ class EnsemblePhishingEngine(private val context: Context) {
             // shouldn't happen, but note if lightgbm skipped
         }
         if (!runLightGBM) {
-            indicators.add("LightGBM skipped (ONNX confident — battery saving)")
+            indicators.add("LightGBM + HGB skipped (ONNX confident — battery saving)")
         }
 
         // ── Explanation ──
         val explanation = buildExplanation(
-            verdict, fusedScore, onnxScore, lgbScore, boundedHeuristicScore,
+            verdict, fusedScore, onnxScore, lgbScore, hgbScore, boundedHeuristicScore,
             signatureMatch, indicators, evidencePresent, runLightGBM
         )
 
@@ -205,12 +219,20 @@ class EnsemblePhishingEngine(private val context: Context) {
     }
 
     /**
+     * Run HistGradientBoosting ONNX model inference.
+     */
+    private fun runHGB(features: FloatArray): Float {
+        return hgbModel?.inferFromFeatures(features) ?: 0.0f
+    }
+
+    /**
      * Fuse scores from active signals using weighted average (weights re-normalized
      * over only the signals that are present).
      */
     private fun fuseScores(
         onnxScore: Float,
         lightGBMScore: Float,
+        hgbScore: Float,
         heuristicScore: Float,
         signatureScore: Float
     ): Float {
@@ -224,6 +246,10 @@ class EnsemblePhishingEngine(private val context: Context) {
         if (lightGBMScore > SIGNAL_ABSENT) {
             weightedSum += lightGBMScore * WEIGHT_LIGHTGBM
             totalWeight += WEIGHT_LIGHTGBM
+        }
+        if (hgbScore > SIGNAL_ABSENT) {
+            weightedSum += hgbScore * WEIGHT_HGB
+            totalWeight += WEIGHT_HGB
         }
         if (heuristicScore > SIGNAL_ABSENT) {
             weightedSum += heuristicScore * WEIGHT_HEURISTIC
@@ -242,11 +268,12 @@ class EnsemblePhishingEngine(private val context: Context) {
         features: FloatArray,
         signatureScore: Float,
         onnxScore: Float,
+        hgbScore: Float,
         heuristicScore: Float,
         signatureMatch: Boolean,
         extraIndicators: List<String>
     ): ThreatVerdict {
-        val fusedScore = fuseScores(onnxScore, 0.0f, heuristicScore, signatureScore)
+        val fusedScore = fuseScores(onnxScore, 0.0f, hgbScore, heuristicScore, signatureScore)
         val indicators = verdictEngine.identifyIndicators(features, domain).toMutableList()
         indicators.addAll(extraIndicators)
         val explanation = "High-confidence phishing signature match. Score: ${"%.0f".format(fusedScore * 100)}%."
@@ -264,6 +291,7 @@ class EnsemblePhishingEngine(private val context: Context) {
         fusedScore: Float,
         onnxScore: Float,
         lightGBMScore: Float,
+        hgbScore: Float,
         heuristicScore: Float,
         signatureMatch: Boolean,
         indicators: List<String>,
@@ -290,8 +318,11 @@ class EnsemblePhishingEngine(private val context: Context) {
         }
         if (ranLightGBM && lightGBMScore > SIGNAL_ABSENT) {
             modelDetails.add("LightGBM: ${"%.0f".format(lightGBMScore * 100)}%")
+        }
+        if (ranLightGBM && hgbScore > SIGNAL_ABSENT) {
+            modelDetails.add("HGB: ${"%.0f".format(hgbScore * 100)}%")
         } else if (!ranLightGBM) {
-            modelDetails.add("LightGBM: skipped (battery saving)")
+            modelDetails.add("LightGBM + HGB: skipped (battery saving)")
         }
         if (heuristicScore > SIGNAL_ABSENT) {
             modelDetails.add("Heuristic: ${"%.0f".format(heuristicScore * 100)}%")
@@ -345,9 +376,9 @@ class EnsemblePhishingEngine(private val context: Context) {
             onnxReady = neuroShieldEngine?.isReady ?: false,
             heuristicsReady = true,
             vpnActive = false,
-            modelSizeBytes = neuroShieldEngine?.modelSizeBytes ?: 0L,
+            modelSizeBytes = (neuroShieldEngine?.modelSizeBytes ?: 0L) + (hgbModel?.modelSizeBytes ?: 0L),
             featureCount = LexicalFeatureExtractor.FEATURE_COUNT,
-            mode = if (lightGBMModel != null && neuroShieldEngine?.isReady == true) EngineMode.FULL else EngineMode.DEGRADED
+            mode = if ((lightGBMModel != null || hgbModel != null) && neuroShieldEngine?.isReady == true) EngineMode.FULL else EngineMode.DEGRADED
         )
     }
 
@@ -356,5 +387,6 @@ class EnsemblePhishingEngine(private val context: Context) {
      */
     fun close() {
         neuroShieldEngine?.close()
+        hgbModel?.close()
     }
 }
