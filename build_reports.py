@@ -325,6 +325,8 @@ class Docx:
             ext = fn.rsplit('.', 1)[-1] if '.' in fn else 'bin'
             parts.append('<Override PartName="/word/media/%s" ContentType="%s"/>' % (esc(fn), ct))
         parts.append('<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>')
+        parts.append('<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>')
+        parts.append('<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>')
         parts.append('<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>')
         parts.append('<Override PartName="/word/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>')
         parts.append('<Override PartName="/word/_rels/document.xml.rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>')
@@ -337,15 +339,15 @@ class Docx:
     def _rels(self):
         rels = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
                 '<Relationships xmlns="%s">' % R]
-        rels.append('<Relationship Id="rId1" Type="%s/relationships/document" Target="word/document.xml"/>' % R)
-        rels.append('<Relationship Id="rId2" Type="%s/relationships/styles" Target="word/styles.xml"/>' % R)
-        rels.append('<Relationship Id="rId3" Type="%s/relationships/theme" Target="word/theme/theme1.xml"/>' % R)
-        rels.append('<Relationship Id="rIdSettings" Type="%s/relationships/settings" Target="word/settings.xml"/>' % R)
-        rels.append('<Relationship Id="rIdFontTable" Type="%s/relationships/fontTable" Target="word/fontTable.xml"/>' % R)
-        rels.append('<Relationship Id="rIdCoreProps" Type="%s/relationships/core-properties" Target="docProps/core.xml"/>' % R)
+        rels.append('<Relationship Id="rId1" Type="%s/document" Target="word/document.xml"/>' % R)
+        rels.append('<Relationship Id="rId2" Type="%s/styles" Target="word/styles.xml"/>' % R)
+        rels.append('<Relationship Id="rId3" Type="%s/theme" Target="word/theme/theme1.xml"/>' % R)
+        rels.append('<Relationship Id="rIdSettings" Type="%s/settings" Target="word/settings.xml"/>' % R)
+        rels.append('<Relationship Id="rIdFontTable" Type="%s/fontTable" Target="word/fontTable.xml"/>' % R)
+        rels.append('<Relationship Id="rIdCoreProps" Type="%s/core-properties" Target="docProps/core.xml"/>' % R)
         i = 4
         for rid in self.media:
-            rels.append('<Relationship Id="%s" Type="%s/relationships/image" Target="media/%s"/>' % (rid, R, self.media[rid][0]))
+            rels.append('<Relationship Id="%s" Type="%s/image" Target="media/%s"/>' % (rid, R, self.media[rid][0]))
             i += 1
         rels.append('</Relationships>')
         return ''.join(rels)
@@ -387,6 +389,12 @@ class Docx:
             '<w:style w:type="paragraph" w:styleId="ListNumber"><w:name w:val="List Number"/>'
             '<w:basedOn w:val="Normal"/><w:next w:val="Normal"/>'
             '<w:pPr><w:ind w:left="360" w:hanging="180"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="2"/></w:numPr></w:pPr></w:style>'
+            '<w:style w:type="paragraph" w:styleId="Header"><w:name w:val="header"/>'
+            '<w:basedOn w:val="Normal"/><w:next w:val="Normal"/>'
+            '<w:rPr><w:sz w:val="18"/><w:color w:val="595959"/></w:rPr></w:style>'
+            '<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/>'
+            '<w:basedOn w:val="Normal"/><w:next w:val="Normal"/>'
+            '<w:rPr><w:sz w:val="18"/><w:color w:val="595959"/></w:rPr></w:style>'
             '</w:styles>')
 
     def _theme(self):
@@ -416,7 +424,7 @@ class Docx:
         return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
                 '<w:hdr xmlns:w="%s"><w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr>'
                 '<w:r><w:rPr><w:sz w:val="18"/><w:color w:val="595959"/></w:rPr>'
-                '<w:t xml:space="preserve">Protctus &mdash; Final Major Project Report</w:t></w:r></w:p></w:hdr>' % W)
+                '<w:t xml:space="preserve">Protctus - Final Major Project Report</w:t></w:r></w:p></w:hdr>' % W)
 
     def _footer(self):
         # footer with project title left and page number right (using a tab + PAGE field)
