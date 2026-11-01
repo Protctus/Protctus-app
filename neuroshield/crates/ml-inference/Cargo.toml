@@ -1,0 +1,20 @@
+[package]
+name = "ml-inference"
+description = "ONNX Runtime wrapper for LightGBM phishing model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "ml_inference"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+onnxruntime = "0.0"
+
+[profile.release]
+lto = true
+opt-level = "z"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"

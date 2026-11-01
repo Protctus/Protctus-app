@@ -1,0 +1,23 @@
+[package]
+name = "decision-engine"
+description = "Multi-layer phishing detection decision engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "decision_engine"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+bloom-filter = { workspace = true }
+feature-extractor = { workspace = true }
+heuristics = { workspace = true }
+ml-inference = { workspace = true }
+
+[profile.release]
+lto = true
+opt-level = "z"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"

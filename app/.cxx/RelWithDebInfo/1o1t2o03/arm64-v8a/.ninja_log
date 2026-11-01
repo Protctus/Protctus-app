@@ -1,0 +1,18 @@
+# ninja log v5
+15	3305	8003544874855964	CMakeFiles/vpn-core.dir/edge_phishing_pipeline.cpp.o	a9f333748f62067
+3309	4361	8003544885467873	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/arm64-v8a/libvpn-core.so	2fa0785a419953
+15	4895	8003451580083505	CMakeFiles/chakravyuh.dir/chakravyuh.cpp.o	4429f813509a68a9
+4895	5309	8003451584254719	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/arm64-v8a/libchakravyuh.so	8f88e666d2a02920
+0	17	0	clean	7035e5ca3c51ad9e
+12	3052	8004333670255665	CMakeFiles/native_scanner.dir/native_scanner.cpp.o	65c14c7b81a18224
+3053	3534	8004333675143222	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/arm64-v8a/libnative_scanner.so	639597ad737714af
+39	2973	8004401897024188	CMakeFiles/native_scanner.dir/native_scanner.cpp.o	65c14c7b81a18224
+16	3084	8004401898008300	CMakeFiles/vpn-core.dir/edge_phishing_pipeline.cpp.o	a9f333748f62067
+51	3169	8004401898948912	CMakeFiles/chakravyuh.dir/chakravyuh.cpp.o	4429f813509a68a9
+2974	3609	8004401903405892	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/arm64-v8a/libnative_scanner.so	639597ad737714af
+3084	3738	8004401904706221	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/arm64-v8a/libvpn-core.so	2fa0785a419953
+3170	3758	8004401904837804	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/arm64-v8a/libchakravyuh.so	8f88e666d2a02920
+16	3093	8004445108862885	CMakeFiles/vpn-core.dir/edge_phishing_pipeline.cpp.o	a9f333748f62067
+3093	4014	8004445118099087	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/arm64-v8a/libvpn-core.so	2fa0785a419953
+10	2599	8004479985749498	CMakeFiles/native_scanner.dir/native_scanner.cpp.o	65c14c7b81a18224
+2600	3019	8004479989994809	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/arm64-v8a/libnative_scanner.so	639597ad737714af

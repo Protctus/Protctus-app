@@ -1,0 +1,43 @@
+[package]
+name = "ns-engine"
+description = "Protctus NeuroShield — on-device phishing detection engine core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "ns_engine"
+# cdylib → produces libns_engine.so for Android JNI System.loadLibrary()
+# rlib   → enables `cargo test` and `cargo clippy` on host platform
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Parser combinators for DNS/TLS/IP packet parsing
+nom = { workspace = true }
+# POSIX syscalls for TUN device I/O, epoll, sockets
+libc = { workspace = true }
+# Logging facade
+log = { workspace = true }
+# LRU cache for L0 decision cache
+lru = { workspace = true }
+# Multi-pattern matching for L1 typosquat detection
+aho-corasick = { workspace = true }
+# Unicode normalization for L1 homograph detection
+unicode-normalization = { workspace = true }
+# SHA-256 for certificate fingerprinting
+sha2 = { workspace = true }
+# MD5 for JA3 fingerprint computation
+md-5 = { workspace = true }
+# Hex encoding for JA3 fingerprint
+hex = "0.4"
+# Derived error types for PhishingError
+thiserror = { workspace = true }
+
+# ── Android-only dependencies ──
+# These are only compiled when targeting Android, reducing host build time.
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { workspace = true }
+android_logger = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

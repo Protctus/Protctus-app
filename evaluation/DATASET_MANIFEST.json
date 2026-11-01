@@ -1,0 +1,119 @@
+{
+  "manifest_version": 1,
+  "generated": "2026-10-31",
+  "evaluation_environment": {
+    "python": "3.14.7",
+    "onnxruntime": "1.31.0",
+    "numpy": "2.5.4",
+    "scikit_learn": "1.9.1",
+    "lightgbm": "4.7.0",
+    "skl2onnx": "1.20.0",
+    "java": "27 (D:\\jdk-27)",
+    "android_sdk": "Installed at D:\\android-sdk (platform-tools, build-tools 34.0.0, platform android-35, NDK r25b, cmake 3.22.1). APK build BLOCKED at native CMake step (yara-core-module yara-src/libyara/ empty — see B-019).",
+    "tflite_interpreter": "BLOCKED (application-control policy)"
+  },
+  "datasets": {
+    "benign": {
+      "path": "app/src/main/assets/vvip_domains.txt",
+      "source": "Tranco-style top/trusted domains bundled with the app",
+      "size_bytes": 5435941,
+      "description": "380,000 benign/trusted domains used as negative class",
+      "license": "bundled with app (proprietary/tranco-derived)",
+      "records_loaded": 380000
+    },
+    "phishing": {
+      "path": "ml/evaluation/fixtures/phishing-domains-ACTIVE.txt",
+      "source": "Phishing-Database (https://github.com/Phishing-Database/Phishing.Database), phishing-domains-ACTIVE.txt",
+      "size_bytes": 11023128,
+      "description": "386,613 community-verified phishing domains used as primary positive class",
+      "license": "public / community-verified",
+      "records_loaded": 386613,
+      "retrieval_date": "2026-10-26 (per docs/FEATURE_INVENTORY.md)",
+      "overlap_removed": 200,
+      "role": "training/evaluation positive class"
+    },
+    "phishing_external_openphish": {
+      "path": "ml/evaluation/fixtures/openphish_feed.txt",
+      "source": "OpenPhish Community Feed (https://www.openphish.com/feed.txt)",
+      "size_bytes": 15529,
+      "description": "300 verified phishing URLs (298 valid hostnames after cleaning) used as INDEPENDENT external validation positive class",
+      "license": "public / OpenPhish community feed",
+      "records_loaded": 300,
+      "retrieval_date": "2026-10-31",
+      "overlap_removed": 2,
+      "role": "external validation only (independent, NOT used for training or threshold tuning)"
+    },
+    "dynamic_feature_data": {
+      "path": "app/src/main/assets/neuroshield_dynamic_data.json",
+      "source": "bundled corpus statistics (TLD phishing rates, brands, suspicious TLDs, new gTLDs, keywords)",
+      "size_bytes": 10780,
+      "purpose": "Populates production features 46-52 (brand-in-SLD, TLD phishing rate, new-gTLD, keyword presence)"
+    },
+    "phishing_signatures_seed": {
+      "source": "hardcoded seed set in EnsemblePhishingEngine.loadPhishingSignatures()",
+      "count": 12,
+      "purpose": "Layer-0 exact-match signature blocklist (offline, day-one)"
+    },
+    "feature_vector_malware_model": {
+      "path": "app/src/main/assets/feature_vector_malware_model.json",
+      "source": "Synthetic demonstration model trained by ml/evaluation/train_feature_vector_malware.py on synthetic 68-feature data",
+      "size_bytes": 2246,
+      "description": "Logistic regression weights (68 features) + bias for FeatureVectorMalwareEngine. SYNTHETIC — NOT production-ready, NOT a claim of real detection performance.",
+      "license": "N/A (demonstration)",
+      "feature_count": 68,
+      "role": "FeatureVectorMalwareEngine model asset; schema for real Droidware-compatible training",
+      "note": "Train on real Droidware 68-feature data before production use."
+    }
+  },
+  "splits": {
+    "methodology": "Stratified train/validation/test = 60/20/20, fixed RNG seed 42",
+    "grouping": "Domain-grouped by registrable domain (registrable_domain = last 2 labels) to prevent related-subdomain leakage across splits",
+    "overlap_handling": "Exact duplicate domains removed; phishing domains overlapping benign dropped from phishing side",
+    "classes": "Positive = phishing (label 1); Negative = benign (label 0)"
+  },
+  "models_evaluated": {
+    "neuroshield_onnx_weak_original": {
+      "asset": "app/src/main/assets/neuroshield_model.onnx (1,068 bytes, original)",
+      "status": "valid ONNX but weak/degenerate",
+      "replaced_by": "trained LogisticRegression ONNX"
+    },
+    "neuroshield_onnx_trained_lr": {
+      "asset": "app/src/main/assets/neuroshield_model.onnx (replaced, 1,068 bytes)",
+      "algorithm": "LogisticRegression (sklearn, max_iter=3000, class_weight=balanced)",
+      "export": "skl2onnx, input float_input [None,53]",
+      "calibration": "temperature T=1.0177 (app/src/main/assets/neuroshield_calibration.json)",
+      "training_split": "50k/sample held-out (58,911 train / 21,528 val / 19,557 test)"
+    },
+    "comparison_models": [
+      "LogisticRegression",
+      "RandomForestClassifier",
+      "HistGradientBoostingClassifier",
+      "LGBMClassifier (lightgbm)"
+    ]
+  },
+  "metrics_files": {
+    "external_openphish_validation": "ml/evaluation/results/external_openphish_validation.json",
+    "external_openphish_script": "ml/evaluation/external_openphish_validation.py",
+    "compare_50k_log": "ml/evaluation/results/compare_50k.log",
+    "train_lr_log": "ml/evaluation/results/train_lr.log",
+    "lr_metrics": "app/src/main/assets/neuroshield_model_metrics.json",
+    "lr_temperature": "ml/evaluation/results/lr_temperature.txt",
+    "verify_ensemble": "ml/evaluation/verify_ensemble.py",
+    "train_feature_vector_malware": "ml/evaluation/train_feature_vector_malware.py",
+    "feature_vector_model_json": "app/src/main/assets/feature_vector_malware_model.json"
+  },
+  "acceptance_targets": {
+    "accuracy": ">= 0.95",
+    "recall_phishing": ">= 0.95",
+    "met": false,
+    "honest_disclosure": "Best model (LightGBM/HistGradientBoosting) reaches ~0.93 accuracy / ~0.90 recall on held-out sample. 0.95/0.95 NOT met at any useful threshold. Reported honestly, not fabricated."
+  },
+  "blocked_evaluations": {
+    "tflite_phishing_model": "app/src/main/assets/phishing_model.tflite (3,599,788 bytes) — TFLite interpreter blocked by application-control policy; NOT evaluated",
+    "android_device_testing": "No Android SDK / device / emulator; APK build and instrumented tests BLOCKED",
+    "external_mendeley_dataset": "Not downloaded — Rule 3.2 prohibits fetching/opening malicious URL content; existing phishing-domains-ACTIVE.txt used as genuine external phishing dataset instead",
+    "ember_malware_dataset": "Not evaluated — no Android device to run malware engine; EMBER requires compatible classifier schema not present",
+    "maldroid_2020": "Investigated https://www.unb.ca/cic/datasets/maldroid-2020.html — download behind registration form (server error), full APK collection >>1GB extracted (exceeds 1GB limit), contains live malware APKs (Rule 4.2 prohibits executing live malware). NOT downloaded/executed.",
+    "feature_vector_malware_engine": "Cannot evaluate on-device (no device/emulator; build blocked at YARA CMake step). No real 68-feature training data accessible. Synthetic demo model shipped only."
+  }
+}

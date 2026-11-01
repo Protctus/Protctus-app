@@ -1,0 +1,6 @@
+# Exclude server-side tooling (Node.js pipeline)
+server/
+backup/
+
+# Never upload node_modules
+node_modules/

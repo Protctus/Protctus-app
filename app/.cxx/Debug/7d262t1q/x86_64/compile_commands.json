@@ -1,0 +1,12 @@
+[
+{
+  "directory": "A:/Protctus/Protctus-app/app/.cxx/Debug/7d262t1q/x86_64",
+  "command": "C:\\Users\\jatin\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=x86_64-none-linux-android27 --sysroot=C:/Users/jatin/AppData/Local/Android/Sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dchakravyuh_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -o CMakeFiles\\chakravyuh.dir\\chakravyuh.cpp.o -c A:\\Protctus\\Protctus-app\\app\\src\\main\\cpp\\chakravyuh.cpp",
+  "file": "A:\\Protctus\\Protctus-app\\app\\src\\main\\cpp\\chakravyuh.cpp"
+},
+{
+  "directory": "A:/Protctus/Protctus-app/app/.cxx/Debug/7d262t1q/x86_64",
+  "command": "C:\\Users\\jatin\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=x86_64-none-linux-android27 --sysroot=C:/Users/jatin/AppData/Local/Android/Sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dvpn_core_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -O3 -flto -ffast-math -fno-exceptions -fno-rtti -o CMakeFiles\\vpn-core.dir\\edge_phishing_pipeline.cpp.o -c A:\\Protctus\\Protctus-app\\app\\src\\main\\cpp\\edge_phishing_pipeline.cpp",
+  "file": "A:\\Protctus\\Protctus-app\\app\\src\\main\\cpp\\edge_phishing_pipeline.cpp"
+}
+]

@@ -1,0 +1,52 @@
+{
+  "buildFiles": [
+    "A:\\Protctus-app\\app\\src\\main\\cpp\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "D:\\android-sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "A:\\Protctus-app\\app\\.cxx\\Debug\\7d262t1q\\arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "D:\\android-sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "A:\\Protctus-app\\app\\.cxx\\Debug\\7d262t1q\\arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "chakravyuh::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "chakravyuh",
+      "output": "A:\\Protctus-app\\app\\build\\intermediates\\cxx\\Debug\\7d262t1q\\obj\\arm64-v8a\\libchakravyuh.so",
+      "runtimeFiles": []
+    },
+    "native_scanner::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "native_scanner",
+      "output": "A:\\Protctus-app\\app\\build\\intermediates\\cxx\\Debug\\7d262t1q\\obj\\arm64-v8a\\libnative_scanner.so",
+      "runtimeFiles": []
+    },
+    "vpn-core::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "vpn-core",
+      "output": "A:\\Protctus-app\\app\\build\\intermediates\\cxx\\Debug\\7d262t1q\\obj\\arm64-v8a\\libvpn-core.so",
+      "runtimeFiles": []
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "D:\\android-sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe",
+      "cppCompilerExecutable": "D:\\android-sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe"
+    }
+  },
+  "cFileExtensions": [],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}

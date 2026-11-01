@@ -1,0 +1,22 @@
+[package]
+name = "android-jni"
+description = "JNI bindings for NeuroShield detection engine on Android"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "android_jni"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+decision-engine = { workspace = true }
+feature-extractor = { workspace = true }
+jni = "0.21"
+
+[profile.release]
+lto = true
+opt-level = "z"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"

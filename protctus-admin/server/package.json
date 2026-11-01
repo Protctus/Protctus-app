@@ -1,0 +1,22 @@
+{
+  "name": "protctus-sync-server",
+  "version": "1.0.0",
+  "description": "Protctus Admin — Daily Sync Pipeline (Translation + JSON Generation + Backup)",
+  "main": "publish.js",
+  "scripts": {
+    "publish": "node publish.js",
+    "publish:dry": "node publish.js --dry-run",
+    "publish:cron": "node publish.js --cron",
+    "test:mask": "node -e \"const {maskString,unmaskString}=require('./TranslationService');const {masked,tokens}=maskString('Learn about Phishing and Malware with TFLite and OSINT techniques');console.log('Masked:',masked);console.log('Tokens:',tokens);console.log('Unmasked:',unmaskString(masked,tokens));\""
+  },
+  "dependencies": {
+    "@vitalets/google-translate-api": "^9.2.1",
+    "firebase-admin": "^13.7.0"
+  },
+  "optionalDependencies": {
+    "node-cron": "^3.0.3"
+  },
+  "keywords": ["protctus", "translation", "sync", "localization"],
+  "license": "UNLICENSED",
+  "private": true
+}

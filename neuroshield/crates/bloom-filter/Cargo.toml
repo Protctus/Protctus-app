@@ -1,0 +1,19 @@
+[package]
+name = "bloom-filter"
+description = "64KB Bloom filter for trusted domain allowlist"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "bloom_filter"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+
+[profile.release]
+lto = true
+opt-level = "z"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"

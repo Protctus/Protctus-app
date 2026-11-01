@@ -1,0 +1,65 @@
+# Protctus Android Malware Byte Pattern Database (ClamAV .ndb format)
+# Format: MALWARE_NAME:TARGET_TYPE:OFFSET:HEX_PATTERN
+#
+# TARGET_TYPE: 0=any, 12=Java/Android
+# OFFSET: *=anywhere, 0=start, EOF-n=end
+#
+# ═══════════════════════════════════════════
+# SUSPICIOUS DEX PATTERNS
+# ═══════════════════════════════════════════
+# Packed/encrypted DEX header (DexProtector, Jiagu)
+Suspicious.AndroidOS.PackedDex.A:0:0:6465780a30333900
+# DEX magic followed immediately by unusual checksum pattern
+Suspicious.AndroidOS.CorruptDex.A:0:0:6465780a303335000000000000000000
+#
+# ═══════════════════════════════════════════
+# COMMON MALWARE FRAMEWORK INDICATORS
+# ═══════════════════════════════════════════
+# Metasploit Android payload signature
+Exploit.AndroidOS.Meterpreter.A:0:*:636f6d2e6d6574617370  
+# DroidJack RAT package identifier
+Trojan.AndroidOS.DroidJack.A:0:*:6e65742e64726f69646a61636b
+# AhMyth RAT indicator
+Trojan.AndroidOS.AhMyth.A:0:*:61686d7974682e736572766572
+# SpyNote RAT indicator
+Trojan.AndroidOS.SpyNote.A:0:*:636f6d2e7370796e6f7465
+# AndroRAT signature
+Trojan.AndroidOS.AndroRAT.A:0:*:6d792e6170702e636c69656e74
+#
+# ═══════════════════════════════════════════
+# DYNAMIC CODE LOADING PATTERNS
+# ═══════════════════════════════════════════
+# DexClassLoader usage in non-standard location
+Suspicious.AndroidOS.DynLoad.A:0:*:64616c76696b2e73797374656d2e446578436c6173734c6f61646572
+# Runtime.exec shell command execution
+Suspicious.AndroidOS.ShellExec.A:0:*:52756e74696d652e676574523756e74696d6528292e6578656328
+# ProcessBuilder for shell execution
+Suspicious.AndroidOS.ProcessBuilder.A:0:*:50726f636573734275696c646572
+#
+# ═══════════════════════════════════════════
+# CRYPTO MINING INDICATORS
+# ═══════════════════════════════════════════
+# CoinHive/CryptoNight mining strings
+PUA.AndroidOS.CoinMiner.A:0:*:636f696e686976652e636f6d
+PUA.AndroidOS.CoinMiner.B:0:*:637279707461636b2e636f6d
+# Monero mining pool indicator
+PUA.AndroidOS.CryptoMiner.XMR:0:*:7374726174756d2b746370
+#
+# ═══════════════════════════════════════════
+# SMS FRAUD PATTERNS
+# ═══════════════════════════════════════════
+# Premium SMS number patterns (common in SMS fraud malware)
+Trojan.AndroidOS.SmsFraud.A:0:*:73656e64546578744d657373616765
+#
+# ═══════════════════════════════════════════
+# PHISHING/OVERLAY INDICATORS
+# ═══════════════════════════════════════════
+# WebView JavaScript interface injection
+Suspicious.AndroidOS.JSBridge.A:0:*:616464496e746572666163652869
+# Accessibility service abuse pattern
+Suspicious.AndroidOS.A11yAbuse.A:0:*:416363657373696269  6c6974795365727669636554797065
+#
+# ═══════════════════════════════════════════
+# EICAR TEST PATTERN
+# ═══════════════════════════════════════════
+EICAR-Test-Pattern:0:0:58354F2150254041505B345C505A58353428505E2937434329377D2445494341522D5354414E444152442D414E544956495255532D544553542D46494C452124482B482A

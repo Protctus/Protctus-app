@@ -1,0 +1,45 @@
+# Android/Gradle
+*.iml
+.gradle/
+.idea/
+/local.properties
+.DS_Store
+/build/
+app/build/
+vpn-core-module/build/
+yara-core-module/build/
+/captures/
+.externalNativeBuild/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env-python/
+
+# Secrets / environment (never commit real credentials)
+.env
+.env.local
+*.env
+local.properties
+
+# Logs and Temp
+*.log
+crash_logs.txt
+err.txt
+err_utf8.txt
+compile_err.txt
+build_out.txt
+
+# VS Code
+.vscode/
+
+# Build caches
+.wrangler/
+.kotlin/

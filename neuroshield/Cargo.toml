@@ -1,0 +1,40 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/feature-extractor",
+    "crates/bloom-filter",
+    "crates/heuristics",
+    "crates/ml-inference",
+    "crates/decision-engine",
+    "crates/android-jni",
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.82"
+
+[profile.release]
+lto = true
+opt-level = "z"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+
+[workspace.dependencies]
+# Shared dependencies across crates
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+log = "0.4"
+
+# Crate dependencies
+bloom-filter = { path = "crates/bloom-filter" }
+feature-extractor = { path = "crates/feature-extractor" }
+heuristics = { path = "crates/heuristics" }
+ml-inference = { path = "crates/ml-inference" }
+decision-engine = { path = "crates/decision-engine" }
+
+# External crates
+onnxruntime = "0.0"
+jni = "0.21"

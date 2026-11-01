@@ -1,0 +1,33 @@
+{
+  "buildFiles": [
+    "A:\\Protctus\\Protctus-app\\yara-core-module\\src\\main\\cpp\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "C:\\Users\\jatin\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "A:\\Protctus\\Protctus-app\\yara-core-module\\.cxx\\RelWithDebInfo\\6ac5t233\\x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "C:\\Users\\jatin\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "A:\\Protctus\\Protctus-app\\yara-core-module\\.cxx\\RelWithDebInfo\\6ac5t233\\x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "libyara::@6890427a1f51a3e7e1df": {
+      "artifactName": "libyara",
+      "abi": "x86",
+      "output": "A:\\Protctus\\Protctus-app\\yara-core-module\\.cxx\\RelWithDebInfo\\6ac5t233\\x86\\liblibyara.a",
+      "runtimeFiles": []
+    },
+    "yara-core::@6890427a1f51a3e7e1df": {
+      "artifactName": "yara-core",
+      "abi": "x86",
+      "output": "A:\\Protctus\\Protctus-app\\yara-core-module\\build\\intermediates\\cxx\\RelWithDebInfo\\6ac5t233\\obj\\x86\\libyara-core.so",
+      "runtimeFiles": []
+    }
+  }
+}

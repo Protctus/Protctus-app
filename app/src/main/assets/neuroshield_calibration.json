@@ -1,0 +1,14 @@
+{
+  "temperature": 1.0177,
+  "model": "LogisticRegression",
+  "feature_count": 53,
+  "description": "Temperature-scaling calibration for NeuroShield ONNX phishing model. Fitted on held-out validation data.",
+  "calibrated_metrics": {
+    "accuracy": 0.9274,
+    "recall": 0.8937,
+    "precision": 0.9516,
+    "f1": 0.9217,
+    "fpr": 0.0416
+  },
+  "note": "Calibration and metrics measured on a held-out sample. Production accuracy depends on the real data distribution."
+}

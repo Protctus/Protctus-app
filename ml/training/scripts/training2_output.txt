@@ -1,0 +1,69 @@
+============================================================
+NeuroShield Fast Training Pipeline
+============================================================
+
+Loading phishing domains...
+  phishing loaded: 60000
+Loading benign domains (Umbrella)...
+  umbrella benign loaded: 60000
+Loading benign domains (VVIP)...
+  vvip benign loaded: 60000
+  overlap: 10
+  after dedup: phishing=59990, benign=119990
+
+Computing TLD phishing rates...
+  634 TLDs
+
+Split: train=107988, val=35996, test=35996
+
+Building feature matrices...
+    features: 10000/107988
+    features: 20000/107988
+    features: 30000/107988
+    features: 40000/107988
+    features: 50000/107988
+    features: 60000/107988
+    features: 70000/107988
+    features: 80000/107988
+    features: 90000/107988
+    features: 100000/107988
+    features: 10000/35996
+    features: 20000/35996
+    features: 30000/35996
+    features: 10000/35996
+    features: 20000/35996
+    features: 30000/35996
+  X_train: (107988, 53), X_val: (35996, 53), X_test: (35996, 53)
+
+============================================================
+Model Training
+============================================================
+
+Training LogisticRegression...
+  LogisticRegression: train_time=15.9s
+    val thr=0.5430
+    test acc=0.8757 rec=0.7935 prec=0.8267 f1=0.8097 fpr=0.0832
+    CM: tn=22002 fp=1996 fn=2478 tp=9520
+
+Training RandomForest...
+  RandomForest: train_time=54.1s
+    val thr=0.5610
+    test acc=0.9172 rec=0.8360 prec=0.9084 f1=0.8707 fpr=0.0421
+    CM: tn=22987 fp=1011 fn=1968 tp=10030
+
+Training HistGradientBoosting...
+  HistGradientBoosting: train_time=10.7s
+    val thr=0.5990
+    test acc=0.9230 rec=0.8447 prec=0.9178 f1=0.8797 fpr=0.0378
+    CM: tn=23090 fp=908 fn=1863 tp=10135
+
+============================================================
+Best model: HistGradientBoosting
+============================================================
+  Test metrics @ thr=0.5990:
+    accuracy=0.9230 recall=0.8447 precision=0.9178
+    f1=0.8797 fpr=0.0378 fnr=0.1553
+    CM: tn=23090 fp=908 fn=1863 tp=10135
+  skl2onnx not available. Install: pip install skl2onnx
+  Saved pickle: A:\Protctus-app\ml\training\models\neuroshield_histgradientboosting.pkl
+Results saved to A:\Protctus-app\ml\training\models\training_results.json

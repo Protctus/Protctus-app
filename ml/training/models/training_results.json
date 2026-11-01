@@ -1,0 +1,21 @@
+{
+  "seed": 42,
+  "best_model": "HistGradientBoosting",
+  "feature_count": 53,
+  "train_size": 107988,
+  "val_size": 35996,
+  "test_size": 35996,
+  "threshold": 0.599,
+  "test_metrics": {
+    "tn": 23090,
+    "fp": 908,
+    "fn": 1863,
+    "tp": 10135,
+    "accuracy": 0.923019224358262,
+    "recall": 0.8447241206867812,
+    "precision": 0.9177759666757221,
+    "f1": 0.8797361225641249,
+    "fpr": 0.03783648637386449,
+    "fnr": 0.15527587931321887
+  }
+}

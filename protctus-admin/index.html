@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PROTCTUS — Admin Dashboard</title>
+  <meta name="description" content="Protctus Admin Dashboard for managing quests, tickets, notifications, users, devices and crashes." />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <!-- ═══ LOGIN SCREEN ═══ -->
+  <div id="login-screen" class="login-container">
+    <div class="login-card">
+      <div class="login-header-icon"><i data-lucide="shield-check" class="shield-lg"></i></div>
+      <h1>PROTCTUS</h1>
+      <p class="subtitle"><span class="badge">ADMIN</span> &nbsp;Control Panel</p>
+      <div class="form-group">
+        <label for="login-username">Username</label>
+        <div class="input-icon-wrapper">
+          <i data-lucide="user"></i>
+          <input type="text" id="login-username" placeholder="Enter admin username" autocomplete="username" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <div class="input-icon-wrapper">
+          <i data-lucide="lock"></i>
+          <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password" />
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" id="login-btn" onclick="handleLogin()">
+        <i data-lucide="log-in"></i> Sign In
+      </button>
+      <div id="login-error" class="error-msg" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <div id="dashboard" class="app" style="display:none;">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-wrapper">
+          <i data-lucide="shield-check" class="brand-icon"></i>
+          <h2>PROTCTUS</h2>
+        </div>
+        <div class="admin-badge">ADMIN PANEL</div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">General</div>
+        <div class="nav-item admin-only" data-page="overview" onclick="navigateTo('overview')">
+          <i data-lucide="layout-dashboard" class="icon"></i><span>Overview</span>
+        </div>
+        <div class="nav-item admin-only" data-page="users" onclick="navigateTo('users')">
+          <i data-lucide="users" class="icon"></i><span>Users (Full Data)</span>
+        </div>
+        
+        <div class="nav-divider"></div>
+        <div class="nav-label">Management</div>
+        
+        <div class="nav-item admin-only" data-page="billing" onclick="navigateTo('billing')">
+          <i data-lucide="credit-card" class="icon"></i><span>Billing & Subscriptions</span>
+        </div>
+        
+        <div class="nav-item" data-page="quests" onclick="navigateTo('quests')">
+          <i data-lucide="target" class="icon"></i><span>Quests</span>
+        </div>
+        <div class="nav-item" data-page="lab" onclick="navigateTo('lab')">
+          <i data-lucide="book-open" class="icon"></i><span>Protctus Lab</span>
+        </div>
+        <div class="nav-item" data-page="tickets" onclick="navigateTo('tickets')">
+          <i data-lucide="ticket" class="icon"></i><span>Support Tickets</span>
+        </div>
+        <div class="nav-item" data-page="updates" onclick="navigateTo('updates')">
+          <i data-lucide="refresh-cw" class="icon"></i><span>App Updates</span>
+        </div>
+        <div class="nav-item" data-page="blogs" onclick="navigateTo('blogs')">
+          <i data-lucide="file-text" class="icon"></i><span>Blogs & SEO</span>
+        </div>
+        <div class="nav-item" data-page="notifications" onclick="navigateTo('notifications')">
+          <i data-lucide="bell" class="icon"></i><span>Notifications</span>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost btn-full btn-sm" onclick="handleLogout()">
+          <i data-lucide="log-out"></i> Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- ═══ OVERVIEW PAGE ═══ -->
+      <section id="page-overview" class="admin-only-section">
+        <div class="page-header">
+          <div>
+            <h1>Dashboard Overview</h1>
+            <p class="header-subtitle">Welcome back, system operations running smoothly.</p>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon-wrapper"><i data-lucide="users" class="stat-icon primary"></i></div>
+            <div class="stat-info">
+              <div class="stat-label">Total Users</div>
+              <div class="stat-value" id="stat-users">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrapper"><i data-lucide="smartphone" class="stat-icon accent"></i></div>
+            <div class="stat-info">
+              <div class="stat-label">Active Devices</div>
+              <div class="stat-value" id="stat-devices">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrapper"><i data-lucide="alert-triangle" class="stat-icon danger"></i></div>
+            <div class="stat-info">
+              <div class="stat-label">Unresolved Crashes</div>
+              <div class="stat-value" id="stat-crashes">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrapper"><i data-lucide="target" class="stat-icon success"></i></div>
+            <div class="stat-info">
+              <div class="stat-label">Active Quests</div>
+              <div class="stat-value" id="stat-quests">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrapper"><i data-lucide="ticket" class="stat-icon warning"></i></div>
+            <div class="stat-info">
+              <div class="stat-label">Open Tickets</div>
+              <div class="stat-value" id="stat-tickets">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrapper"><i data-lucide="bell" class="stat-icon primary"></i></div>
+            <div class="stat-info">
+              <div class="stat-label">Pending Notifications</div>
+              <div class="stat-value" id="stat-notifs">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon-wrapper"><i data-lucide="book-open" class="stat-icon accent"></i></div>
+            <div class="stat-info">
+              <div class="stat-label">Education Modules</div>
+              <div class="stat-value" id="stat-education">—</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ USERS PAGE ═══ -->
+      <section id="page-users" class="page-section admin-only-section" style="display:none;">
+        <div class="page-header">
+          <div>
+            <h1>User Central Database</h1>
+            <p class="header-subtitle">Search, view profiles, devices, and crash telemetries for all users.</p>
+          </div>
+        </div>
+
+        <!-- Sub Navigation inside Users -->
+        <div class="user-subnav">
+          <button class="btn btn-ghost active" onclick="switchUserTab('profiles')" id="tab-btn-profiles"><i data-lucide="users"></i> User Profiles</button>
+          <button class="btn btn-ghost" onclick="switchUserTab('devices')" id="tab-btn-devices"><i data-lucide="smartphone"></i> Global Devices</button>
+          <button class="btn btn-ghost" onclick="switchUserTab('crashes')" id="tab-btn-crashes"><i data-lucide="activity"></i> App Crashlytics</button>
+        </div>
+
+        <!-- Tab: Profiles -->
+        <div class="data-table user-tab-view" id="users-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>User ID</th><th>Username</th><th>Email</th><th>Status</th><th>Plan</th><th>Joined</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body"></tbody>
+          </table>
+        </div>
+
+        <!-- Tab: Devices -->
+        <div class="data-table user-tab-view" id="devices-table-container" style="display:none;">
+          <table>
+            <thead>
+              <tr>
+                <th>Device ID</th><th>Owner UID</th><th>Model</th><th>OS</th><th>Security Status</th><th>Last Seen</th>
+              </tr>
+            </thead>
+            <tbody id="devices-table-body"></tbody>
+          </table>
+        </div>
+
+        <!-- Tab: Crashes -->
+        <div class="data-table user-tab-view" id="crashes-table-container" style="display:none;">
+          <table>
+            <thead>
+              <tr>
+                <th>Crash ID</th><th>Issue Signature</th><th>App Version</th><th>Affected Users</th><th>Status</th><th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="crashes-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ BILLING & SUBSCRIPTIONS PAGE ═══ -->
+      <section id="page-billing" class="page-section admin-only-section" style="display:none;">
+        <div class="page-header">
+          <div>
+            <h1>Billing & Subscriptions</h1>
+            <p class="header-subtitle">God-Mode Access: Manually grant premium tiers or issue refunds.</p>
+          </div>
+        </div>
+
+        <div class="billing-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px;">
+          
+          <!-- Grant Tier Card -->
+          <div class="stat-card" style="flex-direction: column; align-items: flex-start; padding: 24px; background: #0A0B0E; border: 1px solid #1E293B;">
+            <div style="display: flex; align-items: center; margin-bottom: 16px;">
+              <i data-lucide="shield" class="primary" style="margin-right: 8px;"></i>
+              <h3 style="margin: 0;">Grant Subscription Tier</h3>
+            </div>
+            <p style="color: #7F909F; font-size: 14px; margin-bottom: 20px;">Instantly bypass payment gateway and provision an account.</p>
+            
+            <div class="form-group" style="width: 100%;">
+              <label>User Email</label>
+              <input type="email" id="grant-email" placeholder="influencer@example.com" />
+            </div>
+            
+            <div class="form-group" style="width: 100%;">
+              <label>Clearance Level</label>
+              <select id="grant-tier">
+                <option value="PREMIUM">PREMIUM (Standard)</option>
+                <option value="ELITE">ELITE (God Mode)</option>
+              </select>
+            </div>
+            
+            <div class="form-group" style="width: 100%;">
+              <label>Duration (Months)</label>
+              <select id="grant-duration">
+                <option value="1">1 Month</option>
+                <option value="3">3 Months</option>
+                <option value="6">6 Months</option>
+                <option value="12" selected>12 Months</option>
+              </select>
+            </div>
+            
+            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="processGrantTier()">
+              <i data-lucide="zap"></i> Provision Account
+            </button>
+          </div>
+
+          <!-- Process Refund Card -->
+          <div class="stat-card" style="flex-direction: column; align-items: flex-start; padding: 24px; background: #0A0B0E; border: 1px solid #1E293B;">
+            <div style="display: flex; align-items: center; margin-bottom: 16px;">
+              <i data-lucide="refresh-cw" class="warning" style="margin-right: 8px;"></i>
+              <h3 style="margin: 0;">Issue Gateway Refund</h3>
+            </div>
+            <p style="color: #7F909F; font-size: 14px; margin-bottom: 20px;">Reverse a transaction on Razorpay and revoke access.</p>
+            
+            <div class="form-group" style="width: 100%;">
+              <label>Payment ID</label>
+              <input type="text" id="refund-pay-id" placeholder="pay_XYZ1234567890" />
+            </div>
+            
+            <div class="form-group" style="width: 100%;">
+              <label>Amount (in Paise) - Optional</label>
+              <input type="number" id="refund-amount" placeholder="Leave blank for full refund" />
+            </div>
+            
+            <button class="btn btn-outline" style="width: 100%; margin-top: 10px; border-color: #EF4444; color: #EF4444;" onclick="processRefund()">
+              <i data-lucide="corner-down-left"></i> Execute Refund
+            </button>
+          </div>
+        </div>
+        
+        <div style="margin-top: 32px; margin-bottom: 16px;">
+          <h2>Subscription Ledger</h2>
+          <p class="header-subtitle">Real-time view of all provisioned users and their tier expiry dates.</p>
+        </div>
+        <div class="data-table" id="billing-users-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>User Email</th><th>Tier</th><th>Expires At</th>
+              </tr>
+            </thead>
+            <tbody id="billing-users-table-body">
+               <tr><td colspan="3" style="text-align:center;padding:32px"><div class="spinner-container"><span class="spinner"></span></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ QUESTS PAGE ═══ -->
+      <section id="page-quests" class="page-section" style="display:none;">
+        <div class="page-header">
+          <div>
+            <h1>Quest Manager</h1>
+            <p class="header-subtitle">Configure Gamification and XP mechanics.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="openQuestModal()"><i data-lucide="plus"></i> New Quest</button>
+          </div>
+        </div>
+        <div class="data-table" id="quests-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Title</th><th>Type</th><th>XP</th><th>Trigger</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="quests-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ PROTCTUS LAB PAGE (Microlearning Feed Manager) ═══ -->
+      <section id="page-lab" class="page-section" style="display:none;">
+        <div class="page-header">
+          <div>
+            <h1>Microlearning Feed</h1>
+            <p class="header-subtitle">Manage dynamic, swipeable learning cards for the education vertical feed.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="openFeedCardModal()"><i data-lucide="plus"></i> New Card</button>
+            <button class="btn btn-outline" onclick="generateViaGroq('feedcard')" style="color:#d4a0fc;border-color:#d4a0fc;"><i data-lucide="sparkles"></i> AI Generate</button>
+          </div>
+        </div>
+        <div class="data-table" id="feed-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th><th>Type</th><th>Category</th><th>Correct Answer</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="feed-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ TICKETS PAGE ═══ -->
+      <section id="page-tickets" class="page-section" style="display:none;">
+        <div class="page-header">
+          <div>
+            <h1>Support Tickets</h1>
+            <p class="header-subtitle">Resolve user inquiries and technical issues.</p>
+          </div>
+        </div>
+        <div class="data-table" id="tickets-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticket ID</th><th>Issue</th><th>User</th><th>Status</th><th>Date</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tickets-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ APP UPDATES PAGE ═══ -->
+      <section id="page-updates" class="page-section" style="display:none;">
+        <div class="page-header">
+          <div>
+            <h1>App Updates</h1>
+            <p class="header-subtitle">Manage dynamic app updates and APK distribution.</p>
+          </div>
+        </div>
+        
+        <div class="card" style="margin-bottom: 24px; max-width: 600px;">
+          <h2 style="margin-bottom: 16px;">Publish New Update</h2>
+          <div class="form-group">
+            <label>Version Code (Integer, e.g., 2)</label>
+            <input type="number" id="update-version-code" placeholder="2">
+          </div>
+          <div class="form-group">
+            <label>Version Name (e.g., 1.1.0)</label>
+            <input type="text" id="update-version-name" placeholder="1.1.0">
+          </div>
+          <div class="form-group">
+            <label>Upload APK File</label>
+            <input type="file" id="update-apk-file" accept=".apk">
+          </div>
+          <div class="form-group">
+            <label>Download URL (or upload file above)</label>
+            <input type="text" id="update-download-url" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label>Release Notes</label>
+            <textarea id="update-release-notes" placeholder="What's new..."></textarea>
+          </div>
+          <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="update-is-critical" style="width:auto;">
+            <label for="update-is-critical" style="margin:0;">Critical Update (Forces user to update)</label>
+          </div>
+          <button class="btn btn-primary" onclick="publishUpdate()">Publish Update</button>
+        </div>
+
+        <div class="data-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Version</th><th>Name</th><th>Link</th><th>Notes</th><th>Critical</th><th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="updates-table-body">
+              <tr><td colspan="6" style="text-align:center;">No updates found</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ NOTIFICATIONS PAGE ═══ -->
+      <section id="page-notifications" class="page-section" style="display:none;">
+        <div class="page-header">
+          <div>
+            <h1>Notification Scheduler</h1>
+            <p class="header-subtitle">Broadcast engagement and security alerts.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="openNotifModal()"><i data-lucide="plus"></i> Schedule Notification</button>
+          </div>
+        </div>
+        <div class="data-table" id="notifs-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th><th>Message</th><th>Type</th><th>Scheduled</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="notifs-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═══ BLOGS PAGE ═══ -->
+      <section id="page-blogs" class="page-section" style="display:none;">
+        <div class="page-header">
+          <div>
+            <h1>Blogs & SEO Editor</h1>
+            <p class="header-subtitle">Manage Markdown-based articles synced dynamically to the landing page.</p>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="openBlogModal()"><i data-lucide="plus"></i> New Blog Post</button>
+          </div>
+        </div>
+        <div class="data-table" id="blogs-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th><th>Slug</th><th>Date</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="blogs-table-body">
+              <tr><td colspan="4" style="text-align:center;">Loading blogs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ═══ QUEST MODAL ═══ -->
+  <div id="quest-modal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="quest-modal-title">New Quest</h2>
+        <button class="btn-close" onclick="closeQuestModal()"><i data-lucide="x"></i></button>
+      </div>
+      <input type="hidden" id="quest-edit-id" />
+      <div class="form-group"><label>ID (auto or custom)</label><input type="text" id="quest-id" placeholder="e.g. FA-006 or leave blank" /></div>
+      <div class="form-group"><label>Title</label><input type="text" id="quest-title" placeholder="Quest title" /></div>
+      <div class="form-group"><label>Description</label><textarea id="quest-desc" placeholder="What the user must do"></textarea></div>
+      <div class="form-group"><label>XP Reward</label><input type="number" id="quest-xp" placeholder="100" /></div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="quest-type">
+          <option value="DAILY">DAILY</option>
+          <option value="ONETIME">ONETIME</option>
+          <option value="ACHIEVEMENT">ACHIEVEMENT</option>
+          <option value="SEASONAL">SEASONAL</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Action Trigger</label><input type="text" id="quest-trigger" placeholder="e.g. DAILY_SMART_SCAN" /></div>
+      <div class="form-group">
+        <label>Active</label>
+        <select id="quest-active"><option value="1">Yes</option><option value="0">No</option></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeQuestModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveQuest()">Save Quest</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TICKET REPLY MODAL ═══ -->
+  <div id="ticket-modal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Respond to Ticket</h2>
+        <button class="btn-close" onclick="closeTicketModal()"><i data-lucide="x"></i></button>
+      </div>
+      <input type="hidden" id="ticket-reply-id" />
+      <div class="ticket-detail">
+        <p><strong><i data-lucide="message-square" style="width:16px;height:16px;display:inline-block;vertical-align:middle;"></i> Issue:</strong></p>
+        <div class="ticket-issue" id="ticket-issue-text"></div>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="ticket-status">
+          <option value="in_progress">In Progress</option>
+          <option value="resolved">Resolved</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Admin Reply</label><textarea id="ticket-reply-text" placeholder="Your response to the user..."></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeTicketModal()">Cancel</button>
+        <button class="btn btn-accent" onclick="saveTicketReply()">Send Reply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ NOTIFICATION MODAL ═══ -->
+  <div id="notif-modal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Schedule Notification</h2>
+        <button class="btn-close" onclick="closeNotifModal()"><i data-lucide="x"></i></button>
+      </div>
+      <div class="form-group"><label>Title</label><input type="text" id="notif-title" placeholder="Notification title" /></div>
+      <div class="form-group"><label>Message</label><textarea id="notif-message" placeholder="Notification body text"></textarea></div>
+      <div class="form-group"><label>Image URL (Optional)</label><input type="url" id="notif-image" placeholder="https://example.com/image.png" /></div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="notif-type">
+          <option value="engagement">Engagement</option>
+          <option value="quest_reminder">Quest Reminder</option>
+          <option value="breach_alert">Breach Alert</option>
+          <option value="security_tip">Security Tip</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Schedule Date & Time</label><input type="datetime-local" id="notif-schedule" /></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeNotifModal()">Cancel</button>
+        <button class="btn btn-accent" onclick="sendPushNow()">Push Now</button>
+        <button class="btn btn-primary" onclick="saveNotification()">Schedule</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ USER PROFILE MODAL (SOCIAL MEDIA STYLE) ═══ -->
+  <div id="user-profile-modal" class="modal-overlay" style="display:none;">
+    <div class="modal profile-layout" style="max-width: 900px; padding: 0;">
+      <!-- Profile Header / Banner -->
+      <div class="profile-banner">
+        <button class="btn-close profile-close" onclick="closeUserProfileModal()"><i data-lucide="x"></i></button>
+      </div>
+
+      <!-- Main Profile Info -->
+      <div class="profile-content-container">
+        <div class="profile-avatar-row">
+            <div class="profile-avatar"><i data-lucide="user"></i></div>
+            <div class="profile-actions">
+              <span class="status status-active" id="upm-status">Active</span>
+            </div>
+        </div>
+
+        <div class="profile-identity">
+            <h1 id="upm-username">Unknown User</h1>
+            <p class="profile-email" id="upm-email">no.email@provided.com</p>
+        </div>
+
+        <!-- Quick Stats Strip -->
+        <div class="profile-stats">
+          <div class="stat"><span class="val" id="upm-created">...</span><span class="lbl">Joined</span></div>
+          <div class="stat"><span class="val" id="upm-device-count">0</span><span class="lbl">Devices</span></div>
+          <div class="stat"><span class="val" id="upm-2fa">...</span><span class="lbl">2FA</span></div>
+          <div class="stat"><span class="val" id="upm-uid" style="font-size:12px;">...</span><span class="lbl">UID</span></div>
+        </div>
+
+        <!-- Details Grids -->
+        <div class="profile-grid" style="grid-template-columns: 1fr;">
+            <!-- Devices Section -->
+            <div class="profile-section">
+              <h3><i data-lucide="smartphone"></i> Connected Devices</h3>
+              <div class="sub-table" id="upm-devices-container">
+                 <div class="spinner-container" style="padding: 20px 0;"><span class="spinner"></span></div>
+              </div>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FEED CARD MODAL ═══ -->
+  <div id="feed-card-modal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="feed-modal-title">New Feed Card</h2>
+        <button class="btn-close" onclick="closeFeedCardModal()"><i data-lucide="x"></i></button>
+      </div>
+      <input type="hidden" id="feed-edit-id" />
+      <div class="form-group">
+        <label>Card Type</label>
+        <select id="feed-type" onchange="toggleFeedOptions()">
+          <option value="INFO">INFO (Read-only lesson)</option>
+          <option value="QUIZ_BOOL">QUIZ_BOOL (Safe / Scam)</option>
+          <option value="QUIZ_MCQ">QUIZ_MCQ (Multiple Choice)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" id="feed-category" placeholder="e.g. Phishing, Malware, Privacy" />
+      </div>
+      <div class="form-group"><label>Title</label><input type="text" id="feed-title" placeholder="Card headline" /></div>
+      <div class="form-group"><label>Description</label><textarea id="feed-desc" rows="4" placeholder="The learning content or quiz question..."></textarea></div>
+      <div class="form-group"><label>Visual URL (icon/image)</label><input type="url" id="feed-visual" placeholder="https://img.icons8.com/..." /></div>
+
+      <!-- QUIZ_BOOL options -->
+      <div id="feed-bool-options" style="display:none;">
+        <div class="form-group">
+          <label>Correct Answer</label>
+          <select id="feed-bool-correct">
+            <option value="SAFE">SAFE</option>
+            <option value="SCAM">SCAM</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- QUIZ_MCQ options -->
+      <div id="feed-mcq-options" style="display:none;">
+        <div class="form-group"><label>Option A</label><input type="text" id="feed-opt-a" placeholder="First option" /></div>
+        <div class="form-group"><label>Option B</label><input type="text" id="feed-opt-b" placeholder="Second option" /></div>
+        <div class="form-group"><label>Option C</label><input type="text" id="feed-opt-c" placeholder="Third option" /></div>
+        <div class="form-group"><label>Option D</label><input type="text" id="feed-opt-d" placeholder="Fourth option" /></div>
+        <div class="form-group">
+          <label>Correct Answer (must match exactly)</label>
+          <input type="text" id="feed-mcq-correct" placeholder="Paste the correct option text here" />
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeFeedCardModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveFeedCard()">Save Card</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ BLOG POST MODAL ═══ -->
+  <div id="blog-modal" class="modal-overlay" style="display:none;">
+    <div class="modal" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2 id="blog-modal-title">New Blog Post</h2>
+        <button class="btn-close" onclick="closeBlogModal()"><i data-lucide="x"></i></button>
+      </div>
+      <input type="hidden" id="blog-edit-id" />
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="blog-title" placeholder="e.g. How Protctus Engine Works" />
+      </div>
+      <div class="form-group">
+        <label>URL Slug (e.g. how-protctus-works)</label>
+        <input type="text" id="blog-slug" placeholder="how-protctus-works" />
+      </div>
+      <div class="form-group">
+        <label>Excerpt / Short Description</label>
+        <textarea id="blog-excerpt" rows="2" placeholder="A brief summary for the blog grid..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Markdown Content</label>
+        <textarea id="blog-content" rows="15" placeholder="# Heading 1\n\nWrite your blog in Markdown format here..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Cover Image URL (Optional)</label>
+        <input type="url" id="blog-image" placeholder="https://..." />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeBlogModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveBlog()">Publish to Website</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
