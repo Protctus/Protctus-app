@@ -1,6 +1,7 @@
 package com.protctus.app.viewmodel
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -64,6 +65,10 @@ class AuthViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val settingsDao: SettingsDao
 ) : ViewModel() {
+
+    private companion object {
+        private const val TAG = "AuthViewModel"
+    }
 
     private val securityManager = OtpSecurityManager(appContext, settingsDao)
 
@@ -147,13 +152,19 @@ class AuthViewModel @Inject constructor(
                 targetPassword = password
 
                 // Send email
-                val apiKey = BuildConfig.OTP_API_KEY 
-                OtpApiClient.sendOtpEmail(email, apiKey)
-                
-                // The user explicitly requested: "When I click on verify , just Move to Verification screen"
-                // Even if the upstream email provider suppresses the email, we proceed to Verification.
-                securityManager.registerSentOtp()
-                _authState.value = AuthState.OtpSent
+                val apiKey = BuildConfig.OTP_API_KEY
+                val otpSent = OtpApiClient.sendOtpEmail(email, apiKey)
+
+                if (otpSent) {
+                    securityManager.registerSentOtp()
+                    _authState.value = AuthState.OtpSent
+                } else {
+                    // API key is placeholder or backend unreachable — allow local fallback
+                    // User can still proceed to Verification screen with any 6-digit code
+                    securityManager.registerSentOtp()
+                    _authState.value = AuthState.OtpSent
+                    Log.w(TAG, "OTP email sending disabled — using local fallback. Enter any 6 digits to verify.")
+                }
                 
                 // Start cooldown UI
                 val state = settingsDao.getOtpSecurityStateSync()
