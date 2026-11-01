@@ -1,18 +1,7 @@
 # ninja log v5
-25	3386	8003546202922617	CMakeFiles/vpn-core.dir/edge_phishing_pipeline.cpp.o	a389a03a68df3c5a
-3387	4270	8003546212996028	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/x86_64/libvpn-core.so	9348725327a5d35b
-18	2144	8003451711681961	CMakeFiles/chakravyuh.dir/chakravyuh.cpp.o	114f79f6d02d5bf5
-2144	2833	8003451718290140	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/x86_64/libchakravyuh.so	a932151af2495585
-0	17	0	clean	7035e5ca3c51ad9e
-9	2230	8004333771985191	CMakeFiles/native_scanner.dir/native_scanner.cpp.o	113a97d7c8a96da7
-2231	2706	8004333776983170	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/x86_64/libnative_scanner.so	525fdab8333822a
-28	1946	8004401989058954	CMakeFiles/native_scanner.dir/native_scanner.cpp.o	113a97d7c8a96da7
-9	1971	8004401989300076	CMakeFiles/vpn-core.dir/edge_phishing_pipeline.cpp.o	a389a03a68df3c5a
-18	2012	8004401989701425	CMakeFiles/chakravyuh.dir/chakravyuh.cpp.o	114f79f6d02d5bf5
-1947	2326	8004401992901793	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/x86_64/libnative_scanner.so	525fdab8333822a
-2012	2446	8004401994125422	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/x86_64/libchakravyuh.so	a932151af2495585
-1971	2498	8004401994584581	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/x86_64/libvpn-core.so	9348725327a5d35b
-10	2159	8004445205692647	CMakeFiles/vpn-core.dir/edge_phishing_pipeline.cpp.o	a389a03a68df3c5a
-2160	2875	8004445213119490	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/x86_64/libvpn-core.so	9348725327a5d35b
-36	2275	8004480070699115	CMakeFiles/native_scanner.dir/native_scanner.cpp.o	113a97d7c8a96da7
-2276	2755	8004480075465262	A:/Protctus/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/x86_64/libnative_scanner.so	525fdab8333822a
+1	4011	8152396856322311	CMakeFiles/native_scanner.dir/native_scanner.cpp.o	ae144f5ef20c8689
+37	4691	8152396863119536	CMakeFiles/chakravyuh.dir/chakravyuh.cpp.o	cfadc48f62fa9c0
+20	4926	8152396865542849	CMakeFiles/vpn-core.dir/edge_phishing_pipeline.cpp.o	928ac65b8981c921
+4075	4964	8152396865371119	A:/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/x86_64/libnative_scanner.so	b4dec8200b98304a
+4692	5493	8152396870795889	A:/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/x86_64/libchakravyuh.so	25a4987f728671e9
+4932	6316	8152396878829567	A:/Protctus-app/app/build/intermediates/cxx/RelWithDebInfo/1o1t2o03/obj/x86_64/libvpn-core.so	37f7098fb32a6596

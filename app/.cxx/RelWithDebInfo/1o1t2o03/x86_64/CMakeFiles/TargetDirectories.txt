@@ -1,5 +1,5 @@
-A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/x86_64/CMakeFiles/vpn-core.dir
-A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/x86_64/CMakeFiles/chakravyuh.dir
-A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/x86_64/CMakeFiles/native_scanner.dir
-A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/x86_64/CMakeFiles/edit_cache.dir
-A:/Protctus/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/x86_64/CMakeFiles/rebuild_cache.dir
+A:/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/x86_64/CMakeFiles/vpn-core.dir
+A:/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/x86_64/CMakeFiles/chakravyuh.dir
+A:/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/x86_64/CMakeFiles/native_scanner.dir
+A:/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/x86_64/CMakeFiles/edit_cache.dir
+A:/Protctus-app/app/.cxx/RelWithDebInfo/1o1t2o03/x86_64/CMakeFiles/rebuild_cache.dir

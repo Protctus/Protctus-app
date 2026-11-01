@@ -1,1 +1,1 @@
-A:\Protctus\Protctus-app\app\src\main\cpp\CMakeLists.txt
+A:\Protctus-app\app\src\main\cpp\CMakeLists.txt

@@ -1,1 +1,1 @@
-A:\Protctus\Protctus-app\app\build\intermediates\cxx\RelWithDebInfo\1o1t2o03\obj\x86
+A:\Protctus-app\app\build\intermediates\cxx\RelWithDebInfo\1o1t2o03\obj\x86
